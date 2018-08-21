@@ -20,9 +20,12 @@ public:
         equal
     };
 
+    static constexpr const OpType InvOps[4] = {sub,add,div,mult};
+
     const OpType operation;
-    const Ltype& left;
-    const Rtype& right;
+
+    const Ltype left;
+    const Rtype right;
 
     constexpr op_tree(OpType opname, const Ltype& left_inp, const Rtype& right_inp)
     :operation(opname), left(left_inp), right(right_inp)
