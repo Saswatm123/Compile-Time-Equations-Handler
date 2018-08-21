@@ -17,13 +17,15 @@ public:
         sub,
         mult,
         div,
-        equality
+        equal
     };
 
     const OpType operation;
+    const Ltype& left;
+    const Rtype& right;
 
-    constexpr op_tree(OpType opname)
-    :operation(opname)
+    constexpr op_tree(OpType opname, const Ltype& left_inp, const Rtype& right_inp)
+    :operation(opname), left(left_inp), right(right_inp)
     {}
 };
 
