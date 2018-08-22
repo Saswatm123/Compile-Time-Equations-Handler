@@ -20,7 +20,7 @@ public:
         equal
     };
 
-    static constexpr const OpType InvOps[4] = {sub,add,div,mult};
+    static constexpr const OpType InvOp[4] = {sub, add, div, mult};
 
     const OpType operation;
 

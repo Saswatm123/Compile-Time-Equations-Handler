@@ -18,7 +18,7 @@ OPER long double operator-(const known& lhs, const long double& rhs)
 
 OPER op_tree<long double, unknown> operator-(const known& lhs, const unknown& rhs)
 {
-    return op_tree<long double, unknown>(OpType<long double, unknown>::sub, lhs.value, rhs);
+    return op_tree<long double, unknown>(OpType<long double, unknown>::sub, static_cast<long double>(lhs.value), rhs);
 }
 
 template<typename is_op_tree>

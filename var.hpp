@@ -4,7 +4,7 @@
 #include "op_tree.hpp"
 #include "self_ref.hpp"
 #include "innertype_calc.hpp"
-#include <cmath>
+#include <cmath> //NAN
 
 //Operation impls also #included at bottom
 
