@@ -1,3 +1,5 @@
+#define BITS_Q_STATES 9u //Inp bits required for storing max amount of variables
+
 #include <iostream>
 #include <typeinfo>
 #include "var.hpp"
@@ -10,6 +12,10 @@ using namespace std;
 
 int main()
 {
-    constexpr known force(12); constexpr known mass(3); constexpr unknown acceleration;
-    constexpr auto ans = force/acceleration;
+    PERM known   force       (12,ticket());
+    PERM known   mass        (3 ,ticket());
+    PERM unknown acceleration(   ticket());
+    PERM unknown stuff       (   ticket());
+
+    cout << force.ID << " " << mass.ID << " " << acceleration.ID << " " << stuff.ID;
 }
