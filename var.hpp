@@ -4,7 +4,8 @@
 #include "op_tree.hpp"
 #include "self_ref.hpp"
 #include "innertype_calc.hpp"
-#include <cmath>
+#include "CT_counter.hpp"
+#include <cmath> //NAN
 
 //Operation impls also #included at bottom
 
@@ -18,11 +19,13 @@ template<bool known = 0>
 class var
 {
 public:
-    constexpr var(long double inp = NAN)
-    :value(inp)
+    constexpr var(long double inp = NAN, int ID_inp = -1)
+    :value((known?inp:NAN)), ID((known?ID_inp:inp)) //ternaries are just bandaids for problems caused by having 2 defaults
     {}
 
     const long double value;
+
+    const std::size_t ID;
 };
 
 typedef var<1> known;
