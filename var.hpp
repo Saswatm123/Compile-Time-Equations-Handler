@@ -4,6 +4,7 @@
 #include "op_tree.hpp"
 #include "self_ref.hpp"
 #include "innertype_calc.hpp"
+#include "restriction_calc.hpp"
 #include "CT_counter.hpp"
 #include <cmath> //NAN
 
@@ -15,36 +16,20 @@
 
 #define PERM static constexpr const
 
-template<bool known = 0>
+template<std::size_t IDinp, bool known = 0>
 class var
 {
 public:
-    constexpr var(long double inp = NAN, int ID_inp = -1)
-    :value((known?inp:NAN)), ID((known?ID_inp:inp)) //ternaries are just bandaids for problems caused by having 2 defaults
+    constexpr var(long double inp = NAN)
+    :value(inp)
     {}
 
     const long double value;
 
-    const std::size_t ID;
+    static constexpr const std::size_t ID = IDinp;
+
+    static constexpr const bool def = known;
 };
-
-typedef var<1> known;
-typedef var<0> unknown;
-
-//inp both operation types, checks if second is op_tree
-template<typename first, typename second>
-using R_mod_overload_resolve = typename std::enable_if<is_generic_op_tree<second>::value,op_tree<first, second> >::type;
-
-//inp both operation types, checks if first is op_tree
-template<typename first, typename second>
-using L_mod_overload_resolve = typename std::enable_if<is_generic_op_tree<first>::value,op_tree<first, second> >::type;
-
-//enables op_tree<A,B> only if A and B are both op_tree objs
-template<typename A, typename B>
-using both_mod_overload_resolve =
-typename std::enable_if<
-is_generic_op_tree<A>::value && is_generic_op_tree<B>::value, op_tree<A,B>
-                        >::type;
 
 //inp: K C UK OP
 //op_nodes: UK, op_tree<...>, constant
@@ -53,7 +38,7 @@ is_generic_op_tree<A>::value && is_generic_op_tree<B>::value, op_tree<A,B>
 #include "mult_impl.hpp"
 #include "add_impl.hpp"
 #include "subtract_impl.hpp"
-//Future add "equal_impl.hpp"
+#include "equals_impl.hpp"
 
     #undef OPER
 
