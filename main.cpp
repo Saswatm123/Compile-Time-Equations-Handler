@@ -19,7 +19,4 @@ int main()
     PERM known mass(3);
     PERM unknown acceleration;
     PERM unknown stuff;
-
-    cout << endl << force.ID << " " << mass.ID << " " << acceleration.ID << " " << stuff.ID;
-    cout << endl << force.value << " " << mass.value << " " << acceleration.value << " " << stuff.value;
 }

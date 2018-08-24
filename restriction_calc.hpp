@@ -65,7 +65,7 @@ template<typename T>
 using is_var = typename std::is_same<T, const var<T::ID, T::def> >::type;
 
 template<typename T>
-using is_known = typename std::is_same<T, const var<T::ID, T::def> >::type;
+using is_known = typename std::is_same<T, const var<T::ID, 1> >::type;
 
 template<typename T>
 using is_unknown = typename std::conditional<is_known<T>::value, std::false_type, std::true_type>::type;

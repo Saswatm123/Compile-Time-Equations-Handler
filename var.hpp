@@ -16,7 +16,7 @@
 
 #define PERM static constexpr const
 
-template<std::size_t IDinp, bool known = 0>
+template<std::size_t IDinp, bool known>
 class var
 {
 public:
