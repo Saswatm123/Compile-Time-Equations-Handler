@@ -8,14 +8,15 @@
     #define PERM static constexpr const
 #endif // PERM
 
+#define known   var<ticket(),1>
+#define unknown var<ticket(),0>
+
 using namespace std;
 
 int main()
 {
-    PERM known   force       (12,ticket());
-    PERM known   mass        (3 ,ticket());
-    PERM unknown acceleration(   ticket());
-    PERM unknown stuff       (   ticket());
-
-    cout << force.ID << " " << mass.ID << " " << acceleration.ID << " " << stuff.ID;
+    PERM known force(12);
+    PERM known mass(3);
+    PERM unknown acceleration;
+    PERM unknown stuff;
 }
