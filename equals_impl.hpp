@@ -26,23 +26,23 @@ operator==(const known_check_LHS& lhs, const long double& rhs)
 template<typename known_check_LHS, typename unknown_check_RHS>
 OPER
 typename std::enable_if<is_known<const known_check_LHS>::value && is_unknown<const unknown_check_RHS>::value,
-                        op_tree<known_check_LHS, unknown_check_RHS>
+                        op_tree<long double, unknown_check_RHS>
                         >::type
 operator==(const known_check_LHS& lhs, const unknown_check_RHS& rhs)
 {
-    return op_tree<known_check_LHS, unknown_check_RHS>
-    (OpType<known_check_LHS, unknown_check_RHS>::equal, lhs, rhs);
+    return op_tree<long double, unknown_check_RHS>
+    (OpType<long double, unknown_check_RHS>::equal, lhs, rhs);
 }
 
 template<typename known_check_LHS, typename OP_check_RHS>
 OPER
 typename std::enable_if<is_known<const known_check_LHS>::value && is_generic_op_tree<OP_check_RHS>::value,
-                        op_tree<known_check_LHS, OP_check_RHS>
+                        op_tree<long double, OP_check_RHS>
                         >::type
 operator==(const known_check_LHS& lhs, const OP_check_RHS& rhs)
 {
-    return op_tree<known_check_LHS, OP_check_RHS>
-    (OpType<known_check_LHS, OP_check_RHS>::equal, lhs, rhs);
+    return op_tree<long double, OP_check_RHS>
+    (OpType<long double, OP_check_RHS>::equal, lhs, rhs);
 }
 
 template<typename known_check_RHS>
@@ -74,12 +74,12 @@ operator==(const long double& lhs, const OP_check_RHS& rhs)
 
 template<typename unknown_check_LHS, typename known_check_RHS>
 OPER
-typename std::enable_if<is_unknown<const unknown_check_LHS>::value && is_known<known_check_RHS>::value,
+typename std::enable_if<is_unknown<const unknown_check_LHS>::value && is_known<const known_check_RHS>::value,
                         var<unknown_check_LHS::ID,1>
                         >::type
 operator==(const unknown_check_LHS& lhs, const known_check_RHS& rhs)
 {
-    return var<unknown_check_LHS::ID,1>(lhs);
+    return var<unknown_check_LHS::ID,1>(rhs.value);
 }
 
 template<typename unknown_check_LHS>
@@ -120,7 +120,7 @@ typename std::enable_if<is_generic_op_tree<OP_check_LHS>::value && is_known<cons
 operator==(const OP_check_LHS& lhs, const known_check_RHS& rhs)
 {
     return op_tree<OP_check_LHS, long double>
-    (OpType<OP_check_LHS, known_check_RHS>::equal, lhs, static_cast<long double>(rhs.value));
+    (OpType<OP_check_LHS, long double>::equal, lhs, static_cast<long double>(rhs.value));
 }
 
 template<typename OP_check_LHS>
