@@ -67,14 +67,15 @@ using is_var = typename std::is_same<T, const var<T::ID, T::def> >::type;
 template<typename T>
 using is_known = typename std::is_same<T, const var<T::ID, 1> >::type;
 
-using is_known = typename std::is_same<T, const var<T::ID, T::def> >::type;
-
 template<typename T>
 using is_unknown = typename std::conditional<is_known<T>::value, std::false_type, std::true_type>::type;
 
 //LD if known,known
 template<typename firsttype, typename secondtype>
 using both_known_ret_type = typename std::enable_if<is_known<firsttype>::value && is_known<secondtype>::value, long double>::type;
+
+template<typename firsttype, typename secondtype>
+using bool_if_both_known = typename std::enable_if<is_known<firsttype>::value && is_known<secondtype>::value, bool>::type;
 
 //LD if known,constant
 template<typename T>

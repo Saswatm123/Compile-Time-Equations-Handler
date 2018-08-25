@@ -16,11 +16,7 @@
 
 #define PERM static constexpr const
 
-<<<<<<< HEAD
 template<std::size_t IDinp, bool known>
-=======
-template<std::size_t IDinp, bool known = 0>
->>>>>>> bc925241b99bcaaffb4b89d31ddab6ccd60a0a4f
 class var
 {
 public:
