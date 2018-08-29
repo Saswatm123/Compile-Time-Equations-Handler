@@ -36,7 +36,7 @@ operator==(const known_check_LHS& lhs, const unknown_check_RHS& rhs)
 
 template<typename known_check_LHS, typename OP_check_RHS>
 OPER
-typename std::enable_if<is_known<const known_check_LHS>::value && is_generic_op_tree<OP_check_RHS>::value,
+typename std::enable_if<is_known<const known_check_LHS>::value && is_generic_op_tree<const OP_check_RHS>::value,
                         op_tree<long double, OP_check_RHS>
                         >::type
 operator==(const known_check_LHS& lhs, const OP_check_RHS& rhs)
@@ -47,7 +47,7 @@ operator==(const known_check_LHS& lhs, const OP_check_RHS& rhs)
 
 template<typename known_check_RHS>
 OPER
-typename std::enable_if<is_known<const known_check_RHS>::value, bool>
+typename std::enable_if<is_known<const known_check_RHS>::value, bool>::type
 operator==(const long double& lhs, const known_check_RHS& rhs)
 {
     return lhs==rhs.value;
@@ -58,12 +58,12 @@ OPER
 K_if_UK<const unknown_check_RHS>
 operator==(const long double& lhs, const unknown_check_RHS& rhs)
 {
-    return var<unknown_check_RHS::ID ,1>(lhs);
+    return var<unknown_check_RHS::ID, 1>(lhs);
 }
 
 template<typename OP_check_RHS>
 OPER
-typename std::enable_if<is_generic_op_tree<OP_check_RHS>::value,
+typename std::enable_if<is_generic_op_tree<const OP_check_RHS>::value,
                         op_tree<long double, OP_check_RHS>
                         >::type
 operator==(const long double& lhs, const OP_check_RHS& rhs)
@@ -103,7 +103,7 @@ operator==(const unknown_check_LHS& lhs, const unknown_check_RHS& rhs)
 
 template<typename unknown_check_LHS, typename OP_check_RHS>
 OPER
-typename std::enable_if<is_unknown<const unknown_check_LHS>::value && is_generic_op_tree<OP_check_RHS>::value,
+typename std::enable_if<is_unknown<const unknown_check_LHS>::value && is_generic_op_tree<const OP_check_RHS>::value,
                         op_tree<unknown_check_LHS, OP_check_RHS>
                         >::type
 operator==(const unknown_check_LHS& lhs, const OP_check_RHS& rhs)
@@ -114,7 +114,7 @@ operator==(const unknown_check_LHS& lhs, const OP_check_RHS& rhs)
 
 template<typename OP_check_LHS, typename known_check_RHS>
 OPER
-typename std::enable_if<is_generic_op_tree<OP_check_LHS>::value && is_known<const known_check_RHS>::value,
+typename std::enable_if<is_generic_op_tree<const OP_check_LHS>::value && is_known<const known_check_RHS>::value,
                         op_tree<OP_check_LHS, long double>
                         >::type
 operator==(const OP_check_LHS& lhs, const known_check_RHS& rhs)
@@ -125,7 +125,7 @@ operator==(const OP_check_LHS& lhs, const known_check_RHS& rhs)
 
 template<typename OP_check_LHS>
 OPER
-typename std::enable_if<is_generic_op_tree<OP_check_LHS>::value, op_tree<OP_check_LHS, long double> >::type
+typename std::enable_if<is_generic_op_tree<const OP_check_LHS>::value, op_tree<OP_check_LHS, long double> >::type
 operator==(const OP_check_LHS& lhs, const long double& rhs)
 {
     return op_tree<OP_check_LHS, long double>
@@ -134,7 +134,7 @@ operator==(const OP_check_LHS& lhs, const long double& rhs)
 
 template<typename OP_check_LHS, typename unknown_check_RHS>
 OPER
-typename std::enable_if<is_generic_op_tree<OP_check_LHS>::value && is_unknown<const unknown_check_RHS>::value,
+typename std::enable_if<is_generic_op_tree<const OP_check_LHS>::value && is_unknown<const unknown_check_RHS>::value,
                         op_tree<OP_check_LHS, unknown_check_RHS>
                         >::type
 operator==(const OP_check_LHS& lhs, const unknown_check_RHS& rhs)
@@ -145,7 +145,7 @@ operator==(const OP_check_LHS& lhs, const unknown_check_RHS& rhs)
 
 template<typename OP_check_LHS, typename OP_check_RHS>
 OPER
-typename std::enable_if<is_generic_op_tree<OP_check_LHS>::value && is_generic_op_tree<OP_check_RHS>::value,
+typename std::enable_if<is_generic_op_tree<const OP_check_LHS>::value && is_generic_op_tree<const OP_check_RHS>::value,
                         op_tree<OP_check_LHS, OP_check_RHS>
                         >::type
 operator==(const OP_check_LHS& lhs, const OP_check_RHS& rhs)

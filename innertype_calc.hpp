@@ -81,7 +81,7 @@ typename std::is_same<outertype, templ_type<
 //depending on if it is an op_tree
 template<typename outertype>
 using is_generic_op_tree =
-typename std::is_same<outertype, op_tree<
+typename std::is_same<outertype, const op_tree<
             typename std::conditional<
 hide_impl::has_Ltype<outertype>::value,
 typename hide_impl::hide_Ltype_inst<outertype>::type,
@@ -92,7 +92,7 @@ hide_impl::has_Rtype<outertype>::value,
 typename hide_impl::hide_Rtype_inst<outertype>::type,
 unique_type
                                       >::type
-                                         >
+                                               >
                       >::type;
 
 #endif // INNERTYPE_CALC
