@@ -4,6 +4,7 @@
 #include "void_t.hpp"
 #include "innertype_calc.hpp"
 #include "ntuple.hpp"
+#include "EIF_filler.hpp"
 
 template<typename T, class = void>
 struct CMDLIST_restrictor
@@ -70,38 +71,292 @@ inline constexpr const auto new_information(const is_op_tree& basetree, const ne
     return 1;
 }
 
-template<typename is_op_tree>
-constexpr const int extract_known(const is_op_tree& OT)
+///ASSUMES NO K==C SINCE SIMPLIFIES TO BOOL. FORM IS f(K)==C
+namespace extract_detail
 {
+    template<typename is_opr>
+    inline constexpr const long double short_eval(const is_opr& operation, const long double lhs, const long double rhs)
+    {
+        using OP = op_tree<char,char>;
 
+        if(operation == OP::add)
+        {
+            return lhs+rhs;
+        }
+        if(operation == OP::div)
+        {
+            return lhs/rhs;
+        }
+        if(operation == OP::sub)
+        {
+            return lhs-rhs;
+        }
+        if(operation == OP::mult)
+        {
+            return lhs*rhs;
+        }
+    }
+
+    namespace resolve_impl
+    {
+        template<typename is_op_tree,
+                 typename std::enable_if<std::is_arithmetic<typename is_op_tree::Rtype>::value &&
+                                        !std::is_arithmetic<typename is_op_tree::Ltype>::value, EI_type>::type...>
+        inline constexpr const long double resolve(const is_op_tree& OT)
+        {
+            return short_eval(OT.operation, resolve(OT.left), OT.right);
+        }
+
+        template<typename is_op_tree,
+                 typename std::enable_if<std::is_arithmetic<typename is_op_tree::Ltype>::value &&
+                                        !std::is_arithmetic<typename is_op_tree::Rtype>::value, EI_type>::type...>
+        inline constexpr const long double resolve(const is_op_tree& OT)
+        {
+            return short_eval(OT.operation, OT.left, resolve(OT.right) );
+        }
+
+        template<typename is_op_tree, typename std::enable_if<std::is_arithmetic<typename is_op_tree::Ltype>::value &&
+                                                              std::is_arithmetic<typename is_op_tree::Rtype>::value,
+                                                              EI_type
+                                                              >::type...
+                 >
+        inline constexpr const long double resolve(const is_op_tree& OT)
+        {
+            return short_eval(OT.operation, OT.left, OT.right);
+        }
+
+        template<typename is_op_tree, typename std::enable_if<!std::is_arithmetic<typename is_op_tree::Ltype>::value &&
+                                                              !std::is_arithmetic<typename is_op_tree::Rtype>::value,
+                                                              EI_type
+                                                              >::type...
+                 >
+        inline constexpr const long double resolve(const is_op_tree& OT)
+        {
+            return short_eval(OT.operation, resolve(OT.left), resolve(OT.right));
+        }
+
+    }
+
+    namespace extract_impl
+    {
+        ///add
+        template<typename is_op_tree, typename M_op_type, M_op_type M_tree, bool side1, bool side2,
+                 typename std::enable_if<M_tree.operation == OpType<
+                                                                    typename M_op_type::Ltype,
+                                                                    typename M_op_type::Rtype
+                                                                    >::add, EI_type
+                                         >::type...
+                 >
+        inline constexpr const auto extract_known(const is_op_tree& OT)
+        {
+            auto S_branch = ((!side1)?OT.right:OT.left); //non-important side
+
+            auto M_branch = ((!side2)?(side1?OT.right:OT.left).right
+                                     :(side1?OT.right:OT.left).left); //clip to opp. side
+
+            auto S_tree = op_tree<decltype(S_branch),decltype(M_branch)>
+            (OpType<decltype(S_branch),decltype(M_branch)>::sub, S_branch, M_branch);
+
+            auto new_M_tree = (side2?(side1?OT.right:OT.left).right
+                                    :(side1?OT.right:OT.left).left);
+
+            return op_tree<decltype(side1?new_M_tree:S_tree), decltype((!side1)?new_M_tree:S_tree)>
+                          (OpType<decltype(side1?new_M_tree:S_tree), decltype((!side1)?new_M_tree:S_tree)>::equal,
+                           side1?new_M_tree:S_tree, (!side1)?new_M_tree:S_tree);
+        }
+
+        ///sub, MLeft
+        template<typename is_op_tree, typename M_op_type, M_op_type M_tree, bool side1, bool side2,
+                 typename std::enable_if<M_tree.operation == OpType<
+                                                                    typename M_op_type::Ltype,
+                                                                    typename M_op_type::Rtype
+                                                                    >::sub && !side2, EI_type
+                                         >::type...
+                 >
+        inline constexpr const auto extract_known(const is_op_tree& OT)
+        {
+            auto S_branch = ((!side1)?OT.right:OT.left); //non-important side
+
+            auto M_branch = ((!side2)?(side1?OT.right:OT.left).right
+                                     :(side1?OT.right:OT.left).left); //clip to opp. side
+
+            //if side2==1, clip(sub,S,M) -> clip(mult, prev, -1)
+            //if side2==0, clip(add,S,M)
+
+            auto S_tree = op_tree<decltype(S_branch), decltype(M_branch)>
+            (OpType<decltype(S_branch), decltype(M_branch)>::add, S_branch, M_branch);
+
+            auto new_M_tree = (side2?(side1?OT.right:OT.left).right
+                                    :(side1?OT.right:OT.left).left);
+
+            return op_tree<decltype(side1?new_M_tree:S_tree), decltype(!side1?new_M_tree:S_tree)>
+                          (OpType<decltype(side1?new_M_tree:S_tree), decltype(!side1?new_M_tree:S_tree)>::equal,
+                           side1?new_M_tree:S_tree, (!side1)?new_M_tree:S_tree);
+        }
+
+        ///sub, MRight
+        template<typename is_op_tree, typename M_op_type, M_op_type M_tree, bool side1, bool side2,
+                 typename std::enable_if<M_tree.operation == OpType<
+                                                                    typename M_op_type::Ltype,
+                                                                    typename M_op_type::Rtype
+                                                                    >::sub && side2, EI_type
+                                         >::type...
+                 >
+        inline constexpr const auto extract_known(const is_op_tree& OT)
+        {
+            using op_base = op_tree<typename is_op_tree::Ltype, typename is_op_tree::Rtype>;
+
+            auto S_branch = ((!side1)?OT.right:OT.left); //non-important side
+
+            auto M_branch = ((!side2)?(side1?OT.right:OT.left).right
+                                     :(side1?OT.right:OT.left).left); //clip to opp. side
+
+            //if side2==1, clip(sub,S,M) -> clip(mult, prev, -1)
+
+            auto mid_RHS = op_tree<decltype(S_branch),decltype(M_branch)>
+                                  (OpType<decltype(S_branch),decltype(M_branch)>::sub, S_branch, M_branch);
+
+            auto final_S_tree = op_tree<decltype(mid_RHS), long double>
+                                (OpType<decltype(mid_RHS), long double>::mult, mid_RHS, -1);
+
+            auto new_M_tree = (side2?(side1?OT.right:OT.left).right
+                                    :(side1?OT.right:OT.left).left);
+
+            return op_tree<decltype(side1?new_M_tree:final_S_tree), decltype(!side1?new_M_tree:final_S_tree)>
+                          (OpType<decltype(side1?new_M_tree:final_S_tree), decltype(!side1?new_M_tree:final_S_tree)>::equal,
+                           side1?new_M_tree:final_S_tree, !side1?new_M_tree:final_S_tree);
+        }
+
+        ///mult
+        template<typename is_op_tree, typename M_op_type, M_op_type M_tree, bool side1, bool side2,
+                 typename std::enable_if<M_tree.operation == OpType<
+                                                                    typename M_op_type::Ltype,
+                                                                    typename M_op_type::Rtype
+                                                                    >::mult, EI_type
+                                         >::type...
+                 >
+        inline constexpr const auto extract_known(const is_op_tree& OT)
+        {
+            auto S_branch = ((!side1)?OT.right:OT.left); //non-important side
+
+            auto M_branch = ((!side2)?(side1?OT.right:OT.left).right
+                                     :(side1?OT.right:OT.left).left); //clip to opp. side
+
+            auto S_tree = op_tree<decltype(S_branch),decltype(M_branch)>
+            (OpType<decltype(S_branch),decltype(M_branch)>::div, S_branch, M_branch);
+
+            auto new_M_tree = (side2?(side1?OT.right:OT.left).right
+                                    :(side1?OT.right:OT.left).left);
+
+            return op_tree<decltype(side1?new_M_tree:S_tree), decltype((!side1)?new_M_tree:S_tree)>
+                          (OpType<decltype(side1?new_M_tree:S_tree), decltype((!side1)?new_M_tree:S_tree)>::equal,
+                           side1?new_M_tree:S_tree, (!side1)?new_M_tree:S_tree);
+        }
+
+        ///div, Mleft
+        template<typename is_op_tree, typename M_op_type, M_op_type M_tree, bool side1, bool side2,
+                 typename std::enable_if<M_tree.operation == OpType<
+                                                                    typename M_op_type::Ltype,
+                                                                    typename M_op_type::Rtype
+                                                                    >::div && !side2, EI_type
+                                         >::type...
+                 >
+        inline constexpr const auto extract_known(const is_op_tree& OT)
+        {
+            auto S_branch = ((!side1)?OT.right:OT.left); //non-important side
+
+            auto M_branch = ((!side2)?(side1?OT.right:OT.left).right
+                                     :(side1?OT.right:OT.left).left); //clip to opp. side
+
+            auto S_tree = op_tree<decltype(S_branch), decltype(M_branch)>
+            (OpType<decltype(S_branch), decltype(M_branch)>::mult, S_branch, M_branch);
+
+            auto new_M_tree = (side2?(side1?OT.right:OT.left).right
+                                    :(side1?OT.right:OT.left).left);
+
+            return op_tree<decltype(side1?new_M_tree:S_tree), decltype(!side1?new_M_tree:S_tree)>
+                          (OpType<decltype(side1?new_M_tree:S_tree), decltype(!side1?new_M_tree:S_tree)>::equal,
+                           side1?new_M_tree:S_tree, (!side1)?new_M_tree:S_tree);
+        }
+
+        ///div, MRight
+        template<typename is_op_tree, typename M_op_type, M_op_type M_tree, bool side1, bool side2,
+                 typename std::enable_if<M_tree.operation == OpType<
+                                                                    typename M_op_type::Ltype,
+                                                                    typename M_op_type::Rtype
+                                                                    >::div && side2, EI_type
+                                         >::type...
+                 >
+        inline constexpr const auto extract_known(const is_op_tree& OT)
+        {
+            using op_base = op_tree<typename is_op_tree::Ltype, typename is_op_tree::Rtype>;
+
+            auto S_branch = ((!side1)?OT.right:OT.left); //non-important side
+
+            auto M_branch = ((!side2)?(side1?OT.right:OT.left).right
+                                     :(side1?OT.right:OT.left).left); //clip to opp. side
+
+            auto mid_RHS = op_tree<decltype(S_branch),decltype(M_branch)>
+                                  (OpType<decltype(S_branch),decltype(M_branch)>::div, S_branch, M_branch);
+
+            auto final_S_tree = op_tree<decltype(mid_RHS), long double>
+                                (OpType<decltype(mid_RHS), long double>::div, 1, mid_RHS);
+
+            auto new_M_tree = (side2?(side1?OT.right:OT.left).right
+                                    :(side1?OT.right:OT.left).left);
+
+            return op_tree<decltype(side1?new_M_tree:final_S_tree), decltype(!side1?new_M_tree:final_S_tree)>
+                          (OpType<decltype(side1?new_M_tree:final_S_tree), decltype(!side1?new_M_tree:final_S_tree)>::equal,
+                           side1?new_M_tree:final_S_tree, !side1?new_M_tree:final_S_tree);
+        }
+    }
+
+    template<typename is_op_tree>
+    inline constexpr const extract_known_main(const is_op_tree& OT)
+    {
+        using namespace extract_impl;
+
+        std::size_t side   = UK_count(OT.right); //0 left 1 right
+
+        std::size_t d_side = UK_count((side?OT.right:OT.left).right);
+
+        auto M_tree = side?OT.right:OT.left; //node to remove
+
+        auto found_known = extract_known<decltype(OT), decltype(M_tree), M_tree, side, d_side>
+                           (OT);
+
+        //once pure K = f(C), resolve(found_known)
+    }
 }
 
 //Plug In Knowns
 namespace PIK
 {
+    using namespace extract_detail;
+
     template<typename is_op_tree, typename ntup_type, std::size_t UK_num, std::size_t maxind, std::size_t ind,
-             typename std::enable_if<UK_num==1 && ind==(maxind-1), int>::type...>
+             typename std::enable_if<UK_num==1 && ind==(maxind-1), EI_type>::type...>
     inline constexpr const auto plug_in_knowns(const is_op_tree& OT, const ntup_type& knownlist)
     {
-        return extract_known(OT);
+        return extract_known_main(OT);
     }
 
     template<typename is_op_tree, typename ntup_type, std::size_t UK_num, std::size_t maxind, std::size_t ind,
-             typename std::enable_if<UK_num==1 && ind!=(maxind-1), int>::type...>
+             typename std::enable_if<UK_num==1 && ind!=(maxind-1), EI_type>::type...>
     inline constexpr const auto plug_in_knowns(const is_op_tree& OT, const ntup_type& knownlist)
     {
-        return extract_known(OT);
+        return extract_known_main(OT);
     }
 
     template<typename is_op_tree, typename ntup_type, std::size_t UK_num, std::size_t maxind, std::size_t ind,
-             typename std::enable_if<UK_num!=1 && ind==(maxind-1), int>::type...>
+             typename std::enable_if<UK_num!=1 && ind==(maxind-1), EI_type>::type...>
     inline constexpr const auto plug_in_knowns(const is_op_tree& OT, const ntup_type& knownlist)
     {
         return new_information(OT, get<ind>(knownlist));
     }
 
     template<typename is_op_tree, typename ntup_type, std::size_t UK_num, std::size_t maxind, std::size_t ind,
-             typename std::enable_if<UK_num!=1 && ind!=(maxind-1), int>::type...>
+             typename std::enable_if<UK_num!=1 && ind!=(maxind-1), EI_type>::type...>
     inline constexpr const auto plug_in_knowns(const is_op_tree& OT, const ntup_type& knownlist)
     {
         auto Q = new_information(OT, get<ind>(knownlist));

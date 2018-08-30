@@ -34,4 +34,8 @@ int main()
     cout << endl << f;
 
     cout << endl << new_information(N, 2);
+
+    constexpr op_tree<long double, long double> first(OpType<long double, long double>::sub,3,5);
+    constexpr auto aa = extract_detail::resolve_impl::resolve(first);
+    cout << aa;
 }
