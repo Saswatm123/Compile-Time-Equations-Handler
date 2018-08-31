@@ -95,6 +95,10 @@ namespace extract_detail
         {
             return lhs*rhs;
         }
+        if(operation == OP::equal)
+        {
+            return lhs==rhs;
+        }
     }
 
     namespace resolve_impl
@@ -309,10 +313,25 @@ namespace extract_detail
                           (OpType<decltype(side1?new_M_tree:final_S_tree), decltype(!side1?new_M_tree:final_S_tree)>::equal,
                            side1?new_M_tree:final_S_tree, !side1?new_M_tree:final_S_tree);
         }
+
     }
 
-    template<typename is_op_tree>
-    inline constexpr const extract_known_main(const is_op_tree& OT)
+    template<typename is_op_tree, typename std::enable_if<is_unknown<const typename is_op_tree::Ltype>::value !=
+                                                          is_unknown<const typename is_op_tree::Rtype>::value,
+                                                          EI_type
+                                                          >::type...
+             >
+    inline constexpr const long double extract_known_main(const is_op_tree& OT)
+    {
+        return short_eval(OpType<typename is_op_tree::Ltype, typename is_op_tree::Rtype>::equal, OT.left, OT.right);
+    }
+
+    template<typename is_op_tree, typename std::enable_if<!is_unknown<const typename is_op_tree::Ltype>::value &&
+                                                          !is_unknown<const typename is_op_tree::Rtype>::value,
+                                                          EI_type
+                                                          >::type...
+             >
+    inline constexpr const long double extract_known_main(const is_op_tree& OT)
     {
         using namespace extract_impl;
 
@@ -322,10 +341,10 @@ namespace extract_detail
 
         auto M_tree = side?OT.right:OT.left; //node to remove
 
-        auto found_known = extract_known<decltype(OT), decltype(M_tree), M_tree, side, d_side>
-                           (OT);
+        auto passdown = extract_known<decltype(OT), decltype(M_tree), M_tree, side, d_side>
+                        (OT);
 
-        //once pure K = f(C), resolve(found_known)
+        return extract_known_main(passdown);
     }
 }
 

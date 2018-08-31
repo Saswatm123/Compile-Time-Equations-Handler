@@ -23,18 +23,6 @@ int main()
     PERM unknown acceleration;
     PERM unknown stuff;
 
-    constexpr auto N = (stuff==acceleration);
-
-    constexpr auto TARGETVAR = mass;
-
-    constexpr const ntuple<decltype(mass)> knownlist(mass);
-
-    constexpr auto f = iter_through_equations(TARGETVAR, knownlist, mass, 'a', 2, 'b');
-
-    cout << endl << f;
-
-    cout << endl << new_information(N, 2);
-
     constexpr op_tree<long double, long double> first(OpType<long double, long double>::sub,3,5);
     constexpr auto aa = extract_detail::resolve_impl::resolve(first);
     cout << aa;
