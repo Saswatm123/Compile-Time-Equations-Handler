@@ -80,7 +80,7 @@ typename std::is_same<outertype, templ_type<
 //pass in type return std::true_type/std::false_type
 //depending on if it is an op_tree
 template<typename outertype>
-using is_generic_op_tree =
+using is_generic_op_tree_engine =
 typename std::is_same<outertype, const op_tree<
             typename std::conditional<
 hide_impl::has_Ltype<outertype>::value,
@@ -94,5 +94,11 @@ unique_type
                                       >::type
                                                >
                       >::type;
+
+template<typename outertype>
+using is_generic_op_tree = typename std::conditional<
+      is_generic_op_tree_engine<outertype>::value ||
+      is_generic_op_tree_engine<typename std::remove_reference<outertype>::type>::value,
+                      std::true_type, std::false_type>::type;
 
 #endif // INNERTYPE_CALC

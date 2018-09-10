@@ -36,7 +36,7 @@ UK_count(const op_tree_piece& OT, std::size_t count = 0)
 
 template<typename op_tree_piece>
 inline constexpr const
-typename std::enable_if<!is_generic_op_tree<const op_tree_piece>::value && !is_unknown<const op_tree_piece>::value, std::size_t>::type
+typename std::enable_if<!is_generic_op_tree<const op_tree_piece>::value && !is_unknown_failsafe<const op_tree_piece>::value, std::size_t>::type
 UK_count(const op_tree_piece& OT, std::size_t count = 0)
 {
     return count;
@@ -63,19 +63,60 @@ inline constexpr const bool has_noted_ID(const is_op_tree& OT, const int& ID)
     return has_noted_ID(OT.left, ID) || has_noted_ID(OT.right, ID);
 }
 
-template<typename is_op_tree, typename newinf_t, typename std::enable_if<is_generic_op_tree<const is_op_tree>::value, is_op_tree>::type...>
+template<typename is_op_tree, typename newinf_t,
+typename std::enable_if<is_generic_op_tree<const is_op_tree>::value &&
+                        is_known_failsafe<const newinf_t>::value, is_op_tree>::type...>
 inline constexpr const auto new_information(const is_op_tree& basetree, const newinf_t& newinf)
 {
     //NI it and UKcount check afterwards. if UKcount afterwards
-    //results in 1, eval numerically.
-    return 1;
+    //results in 1, eval numerically. Return type splitter
+    return is_op_tree::template NI_op_tree<is_op_tree, newinf_t, has_noted_ID(basetree, newinf.ID)>(basetree, newinf);
 }
 
 ///ASSUMES NO K==C SINCE SIMPLIFIES TO BOOL. FORM IS f(K)==C
 namespace extract_detail
 {
-    template<typename is_opr>
-    inline constexpr const long double short_eval(const is_opr& operation, const long double lhs, const long double rhs)
+    template<bool A, typename first, typename second, typename std::enable_if<A, EI_type>::type...>
+    constexpr const auto
+    ternary(const first& firstobj, const second& secondobj)
+    {
+        return firstobj;
+    }
+
+    template<bool A, typename first, typename second, typename std::enable_if<!A, EI_type>::type...>
+    constexpr const auto
+    ternary(const first& firstobj, const second& secondobj)
+    {
+        return secondobj;
+    }
+
+    template<typename is_UK, typename std::enable_if<is_unknown<const is_UK>::value, EI_type>::type...>
+    inline constexpr const var<is_UK::ID, 1>
+    short_eval(int operation, const is_UK& lhs, const long double rhs)
+    {
+        using OP = op_tree<char,char>;
+
+        if(operation==OP::equal)
+        {
+            return lhs==rhs;
+        }
+    }
+
+    template<typename is_UK, typename std::enable_if<is_unknown<const is_UK>::value, EI_type>::type...>
+    inline constexpr const var<is_UK::ID, 1>
+    short_eval(int operation, const long double lhs, const is_UK& rhs)
+    {
+        using OP = op_tree<char,char>;
+
+        if(operation==OP::equal)
+        {
+            return lhs==rhs;
+        }
+    }
+
+    //SE should assume operation is 0-3 (no equals, have handler filter out)
+    inline constexpr const long double
+    short_eval(int operation, const long double lhs, const long double rhs)
     {
         using OP = op_tree<char,char>;
 
@@ -95,28 +136,53 @@ namespace extract_detail
         {
             return lhs*rhs;
         }
-        if(operation == OP::equal)
-        {
-            return lhs==rhs;
-        }
     }
 
     namespace resolve_impl
     {
-        template<typename is_op_tree,
-                 typename std::enable_if<std::is_arithmetic<typename is_op_tree::Rtype>::value &&
-                                        !std::is_arithmetic<typename is_op_tree::Ltype>::value, EI_type>::type...>
-        inline constexpr const long double resolve(const is_op_tree& OT)
-        {
-            return short_eval(OT.operation, resolve(OT.left), OT.right);
-        }
+        //forward declarations
+
+        template<typename is_op_tree, typename std::enable_if<std::is_arithmetic<typename is_op_tree::Rtype>::value &&
+                                               !std::is_arithmetic<typename is_op_tree::Ltype>::value, EI_type>::type...>
+        inline constexpr const long double
+        resolve(const is_op_tree&);
+
+        template<typename is_op_tree, typename std::enable_if<std::is_arithmetic<typename is_op_tree::Ltype>::value &&
+                                               !std::is_arithmetic<typename is_op_tree::Rtype>::value, EI_type>::type...>
+        inline constexpr const long double
+        resolve(const is_op_tree&);
 
         template<typename is_op_tree,
-                 typename std::enable_if<std::is_arithmetic<typename is_op_tree::Ltype>::value &&
-                                        !std::is_arithmetic<typename is_op_tree::Rtype>::value, EI_type>::type...>
-        inline constexpr const long double resolve(const is_op_tree& OT)
+                 typename std::enable_if<!std::is_arithmetic<typename is_op_tree::Ltype>::value &&
+                                         !std::is_arithmetic<typename is_op_tree::Rtype>::value,
+                                         EI_type
+                                         >::type...
+                 >
+        inline constexpr const long double
+        resolve(const is_op_tree&);
+
+        template<typename is_op_tree, typename std::enable_if<std::is_arithmetic<typename is_op_tree::Ltype>::value &&
+                                                              std::is_arithmetic<typename is_op_tree::Rtype>::value,
+                                                              EI_type
+                                                              >::type...
+                 >
+        inline constexpr const long double
+        resolve(const is_op_tree&);
+
+        inline constexpr const long double
+        resolve(const long double);
+
+        /**
+        *   Take in op_tree of all ops and constants and
+        *   simplify to one constant. Variants are C-C (base case),
+        *   C-O, O-C, and O-O. Called from EKM in order to simplify
+        *   side branch
+        */
+
+        inline constexpr const long double
+        resolve(const long double val)
         {
-            return short_eval(OT.operation, OT.left, resolve(OT.right) );
+            return val;
         }
 
         template<typename is_op_tree, typename std::enable_if<std::is_arithmetic<typename is_op_tree::Ltype>::value &&
@@ -124,17 +190,45 @@ namespace extract_detail
                                                               EI_type
                                                               >::type...
                  >
-        inline constexpr const long double resolve(const is_op_tree& OT)
+        inline constexpr const long double
+        resolve(const is_op_tree& OT)
         {
+            /*
+            static_assert(std::is_same<const op_tree<long double, long double>&, decltype(OT) >::value, "");
+
+            static_assert(std::is_same<const int&, std::add_const< int >::type& >::value, "");*/
+
+            ///prob is passing in OT.operation as template argument (not guaranteed as constexpr arg)
             return short_eval(OT.operation, OT.left, OT.right);
         }
 
-        template<typename is_op_tree, typename std::enable_if<!std::is_arithmetic<typename is_op_tree::Ltype>::value &&
-                                                              !std::is_arithmetic<typename is_op_tree::Rtype>::value,
-                                                              EI_type
-                                                              >::type...
+        template<typename is_op_tree, typename std::enable_if<std::is_arithmetic<typename is_op_tree::Rtype>::value &&
+                                               !std::is_arithmetic<typename is_op_tree::Ltype>::value, EI_type>::type...>
+        inline constexpr const long double
+        resolve(const is_op_tree& OT)
+        {
+            /*
+            static_assert(std::is_arithmetic<typename is_op_tree::Ltype::Rtype>::value &&
+                                               !std::is_arithmetic<typename is_op_tree::Ltype::Ltype>::value, "");*/
+            return short_eval(OT.operation, resolve(OT.left), OT.right);
+        }
+
+        template<typename is_op_tree, typename std::enable_if<std::is_arithmetic<typename is_op_tree::Ltype>::value &&
+                                               !std::is_arithmetic<typename is_op_tree::Rtype>::value, EI_type>::type...>
+        inline constexpr const long double
+        resolve(const is_op_tree& OT)
+        {
+            return short_eval(OT.operation, OT.left, resolve(OT.right) );
+        }
+
+        template<typename is_op_tree,
+                 typename std::enable_if<!std::is_arithmetic<typename is_op_tree::Ltype>::value &&
+                                         !std::is_arithmetic<typename is_op_tree::Rtype>::value,
+                                         EI_type
+                                         >::type...
                  >
-        inline constexpr const long double resolve(const is_op_tree& OT)
+        inline constexpr const long double
+        resolve(const is_op_tree& OT)
         {
             return short_eval(OT.operation, resolve(OT.left), resolve(OT.right));
         }
@@ -143,46 +237,77 @@ namespace extract_detail
 
     namespace extract_impl
     {
+        /**
+        *   Take in op tree and turn f(UK) = f(C) into UK = f(C).
+        *   Different protocol for different operations, sub and div
+        *   are side sensitive. Only called from EKM(bottom).
+        */
+
         ///add
-        template<typename is_op_tree, typename M_op_type, M_op_type M_tree, bool side1, bool side2,
-                 typename std::enable_if<M_tree.operation == OpType<
-                                                                    typename M_op_type::Ltype,
-                                                                    typename M_op_type::Rtype
-                                                                    >::add, EI_type
+        template<int M_tree, bool side1, bool side2, typename is_op_tree, typename M_op_type,
+                 typename std::enable_if<M_tree == OpType<
+                                                          typename M_op_type::Ltype,
+                                                          typename M_op_type::Rtype
+                                                          >::add, EI_type
                                          >::type...
                  >
-        inline constexpr const auto extract_known(const is_op_tree& OT)
+        inline constexpr const auto
+        extract_known(const is_op_tree& OT, const M_op_type& unused)
         {
-            auto S_branch = ((!side1)?OT.right:OT.left); //non-important side
+            //non-important side
+            auto S_branch = ternary<!side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left);
 
+            auto helper_left  = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).right;
+            auto helper_right = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).left ;
+
+            //clip to opp. side
+            auto M_branch =
+            ternary<!side2,decltype(helper_left),decltype(helper_right)>(helper_left, helper_right);
+
+            /*
             auto M_branch = ((!side2)?(side1?OT.right:OT.left).right
-                                     :(side1?OT.right:OT.left).left); //clip to opp. side
+                                     :(side1?OT.right:OT.left).left);*/
 
             auto S_tree = op_tree<decltype(S_branch),decltype(M_branch)>
             (OpType<decltype(S_branch),decltype(M_branch)>::sub, S_branch, M_branch);
 
+            auto T_choice1 = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).right;
+            auto T_choice2 = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).left ;
+
+            auto new_M_tree = ternary<side2, decltype(T_choice1), decltype(T_choice2)>(T_choice1, T_choice2);
+
+            /*
             auto new_M_tree = (side2?(side1?OT.right:OT.left).right
                                     :(side1?OT.right:OT.left).left);
+            */
 
+            auto ret_left_type  = ternary< side1, decltype(new_M_tree), decltype(S_tree)>(new_M_tree, S_tree);
+            auto ret_right_type = ternary<!side1, decltype(new_M_tree), decltype(S_tree)>(new_M_tree, S_tree);
+
+            return op_tree<decltype(ret_left_type), decltype(ret_right_type)>
+            (OpType<decltype(ret_left_type), decltype(ret_right_type)>::equal, ret_left_type, ret_right_type);
+
+            /*
             return op_tree<decltype(side1?new_M_tree:S_tree), decltype((!side1)?new_M_tree:S_tree)>
                           (OpType<decltype(side1?new_M_tree:S_tree), decltype((!side1)?new_M_tree:S_tree)>::equal,
-                           side1?new_M_tree:S_tree, (!side1)?new_M_tree:S_tree);
+                           side1?new_M_tree:S_tree, (!side1)?new_M_tree:S_tree);*/
         }
 
         ///sub, MLeft
-        template<typename is_op_tree, typename M_op_type, M_op_type M_tree, bool side1, bool side2,
-                 typename std::enable_if<M_tree.operation == OpType<
-                                                                    typename M_op_type::Ltype,
-                                                                    typename M_op_type::Rtype
-                                                                    >::sub && !side2, EI_type
-                                         >::type...
+        template<int M_tree, bool side1, bool side2, typename is_op_tree,
+                 typename std::enable_if<M_tree == OpType<char,char>::sub && !side2, EI_type>::type...
                  >
-        inline constexpr const auto extract_known(const is_op_tree& OT)
+        inline constexpr const auto
+        extract_known(const is_op_tree& OT)
         {
-            auto S_branch = ((!side1)?OT.right:OT.left); //non-important side
+            auto S_branch = ternary<!side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left); //non-important side
 
-            auto M_branch = ((!side2)?(side1?OT.right:OT.left).right
-                                     :(side1?OT.right:OT.left).left); //clip to opp. side
+            auto helper_left  = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).right;
+            auto helper_right = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).left ;
+
+            //clip to opp. side
+            auto M_branch =
+            ternary<!side2,decltype(helper_left),decltype(helper_right)>(helper_left, helper_right);
 
             //if side2==1, clip(sub,S,M) -> clip(mult, prev, -1)
             //if side2==0, clip(add,S,M)
@@ -190,30 +315,47 @@ namespace extract_detail
             auto S_tree = op_tree<decltype(S_branch), decltype(M_branch)>
             (OpType<decltype(S_branch), decltype(M_branch)>::add, S_branch, M_branch);
 
-            auto new_M_tree = (side2?(side1?OT.right:OT.left).right
-                                    :(side1?OT.right:OT.left).left);
+            auto helper_1 = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).right;
+            auto helper_2 = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).left;
 
+            auto new_M_tree = ternary<side2, decltype(helper_1), decltype(helper_2)>(helper_1, helper_2);
+
+            /*
+            auto new_M_tree = (side2?(side1?OT.right:OT.left).right
+                                    :(side1?OT.right:OT.left).left);*/
+
+            auto ret_help_left  = ternary< side1, decltype(new_M_tree), decltype(S_tree)>(new_M_tree, S_tree);
+            auto ret_help_right = ternary<!side1, decltype(new_M_tree), decltype(S_tree)>(new_M_tree, S_tree);
+
+            return op_tree<decltype(ret_help_left), decltype(ret_help_right)>
+                          (OpType<decltype(ret_help_left), decltype(ret_help_right)>::equal,
+                           ret_help_left, ret_help_right);
+            /*
             return op_tree<decltype(side1?new_M_tree:S_tree), decltype(!side1?new_M_tree:S_tree)>
                           (OpType<decltype(side1?new_M_tree:S_tree), decltype(!side1?new_M_tree:S_tree)>::equal,
                            side1?new_M_tree:S_tree, (!side1)?new_M_tree:S_tree);
+                           */
         }
 
         ///sub, MRight
-        template<typename is_op_tree, typename M_op_type, M_op_type M_tree, bool side1, bool side2,
-                 typename std::enable_if<M_tree.operation == OpType<
-                                                                    typename M_op_type::Ltype,
-                                                                    typename M_op_type::Rtype
-                                                                    >::sub && side2, EI_type
+        template<int M_tree, bool side1, bool side2, typename is_op_tree, typename M_op_type,
+                 typename std::enable_if<M_tree == OpType<
+                                                          typename M_op_type::Ltype,
+                                                          typename M_op_type::Rtype
+                                                          >::sub && side2, EI_type
                                          >::type...
                  >
-        inline constexpr const auto extract_known(const is_op_tree& OT)
+        inline constexpr const auto
+        extract_known(const is_op_tree& OT, const M_op_type& unused)
         {
-            using op_base = op_tree<typename is_op_tree::Ltype, typename is_op_tree::Rtype>;
+            auto S_branch = ternary<!side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left); //non-important side
 
-            auto S_branch = ((!side1)?OT.right:OT.left); //non-important side
+            auto helper_left  = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).right;
+            auto helper_right = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).left ;
 
-            auto M_branch = ((!side2)?(side1?OT.right:OT.left).right
-                                     :(side1?OT.right:OT.left).left); //clip to opp. side
+            //clip to opp. side
+            auto M_branch =
+            ternary<!side2,decltype(helper_left),decltype(helper_right)>(helper_left, helper_right);
 
             //if side2==1, clip(sub,S,M) -> clip(mult, prev, -1)
 
@@ -223,24 +365,31 @@ namespace extract_detail
             auto final_S_tree = op_tree<decltype(mid_RHS), long double>
                                 (OpType<decltype(mid_RHS), long double>::mult, mid_RHS, -1);
 
-            auto new_M_tree = (side2?(side1?OT.right:OT.left).right
-                                    :(side1?OT.right:OT.left).left);
+            auto helper_1 = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).right;
+            auto helper_2 = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).left ;
 
-            return op_tree<decltype(side1?new_M_tree:final_S_tree), decltype(!side1?new_M_tree:final_S_tree)>
-                          (OpType<decltype(side1?new_M_tree:final_S_tree), decltype(!side1?new_M_tree:final_S_tree)>::equal,
-                           side1?new_M_tree:final_S_tree, !side1?new_M_tree:final_S_tree);
+            auto new_M_tree = ternary<side2, decltype(helper_1), decltype(helper_2)>(helper_1, helper_2);
+
+            auto ret_help_left  = ternary< side1, decltype(new_M_tree), decltype(final_S_tree)>(new_M_tree, final_S_tree);
+            auto ret_help_right = ternary<!side1, decltype(new_M_tree), decltype(final_S_tree)>(new_M_tree, final_S_tree);
+
+            return op_tree<decltype(ret_help_left), decltype(ret_help_right)>
+                          (OpType<decltype(ret_help_left), decltype(ret_help_right)>::equal,
+                           ret_help_left, ret_help_right);
         }
 
         ///mult
-        template<typename is_op_tree, typename M_op_type, M_op_type M_tree, bool side1, bool side2,
-                 typename std::enable_if<M_tree.operation == OpType<
-                                                                    typename M_op_type::Ltype,
-                                                                    typename M_op_type::Rtype
-                                                                    >::mult, EI_type
+        template<int M_tree, bool side1, bool side2, typename is_op_tree, typename M_op_type,
+                 typename std::enable_if<M_tree == OpType<
+                                                          typename M_op_type::Ltype,
+                                                          typename M_op_type::Rtype
+                                                          >::mult, EI_type
                                          >::type...
                  >
-        inline constexpr const auto extract_known(const is_op_tree& OT)
+        inline constexpr const auto
+        extract_known(const is_op_tree& OT, const M_op_type& unused)
         {
+            /*
             auto S_branch = ((!side1)?OT.right:OT.left); //non-important side
 
             auto M_branch = ((!side2)?(side1?OT.right:OT.left).right
@@ -255,18 +404,44 @@ namespace extract_detail
             return op_tree<decltype(side1?new_M_tree:S_tree), decltype((!side1)?new_M_tree:S_tree)>
                           (OpType<decltype(side1?new_M_tree:S_tree), decltype((!side1)?new_M_tree:S_tree)>::equal,
                            side1?new_M_tree:S_tree, (!side1)?new_M_tree:S_tree);
+            */
+            //non-important side
+            auto S_branch = ternary<!side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left);
+
+            auto helper_left  = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).right;
+            auto helper_right = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).left ;
+
+            //clip to opp. side
+            auto M_branch = ternary<!side2, decltype(helper_left), decltype(helper_right)>(helper_left, helper_right);
+
+            auto S_tree = op_tree<decltype(S_branch),decltype(M_branch)>
+            (OpType<decltype(S_branch),decltype(M_branch)>::div, S_branch, M_branch);
+
+            auto helper_1 = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).right;
+            auto helper_2 = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).left ;
+
+            auto new_M_tree = ternary<side2, decltype(helper_1), decltype(helper_2)>(helper_1, helper_2);
+
+            auto ret_help_left  = ternary< side1, decltype(new_M_tree), decltype(S_tree)>(new_M_tree, S_tree);
+            auto ret_help_right = ternary<!side1, decltype(new_M_tree), decltype(S_tree)>(new_M_tree, S_tree);
+
+            return op_tree<decltype(ret_help_left), decltype(ret_help_right)>
+                          (OpType<decltype(ret_help_left), decltype(ret_help_right)>::equal,
+                           ret_help_left, ret_help_right);
         }
 
         ///div, Mleft
-        template<typename is_op_tree, typename M_op_type, M_op_type M_tree, bool side1, bool side2,
-                 typename std::enable_if<M_tree.operation == OpType<
-                                                                    typename M_op_type::Ltype,
-                                                                    typename M_op_type::Rtype
-                                                                    >::div && !side2, EI_type
+        template<int M_tree, bool side1, bool side2, typename is_op_tree, typename M_op_type,
+                 typename std::enable_if<M_tree == OpType<
+                                                          typename M_op_type::Ltype,
+                                                          typename M_op_type::Rtype
+                                                          >::div && !side2, EI_type
                                          >::type...
                  >
-        inline constexpr const auto extract_known(const is_op_tree& OT)
+        inline constexpr const auto
+        extract_known(const is_op_tree& OT, const M_op_type& unused)
         {
+            /*
             auto S_branch = ((!side1)?OT.right:OT.left); //non-important side
 
             auto M_branch = ((!side2)?(side1?OT.right:OT.left).right
@@ -281,18 +456,41 @@ namespace extract_detail
             return op_tree<decltype(side1?new_M_tree:S_tree), decltype(!side1?new_M_tree:S_tree)>
                           (OpType<decltype(side1?new_M_tree:S_tree), decltype(!side1?new_M_tree:S_tree)>::equal,
                            side1?new_M_tree:S_tree, (!side1)?new_M_tree:S_tree);
+            */
+
+            //non-important side
+            auto S_branch = ternary<!side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left);
+
+            auto helper_left  = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).right;
+            auto helper_right = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).left ;
+
+            //clip to opp. side
+            auto M_branch = ternary<!side2, decltype(helper_left), decltype(helper_right)>(helper_left, helper_right);
+
+            auto S_tree = op_tree<decltype(S_branch), decltype(M_branch)>
+            (OpType<decltype(S_branch), decltype(M_branch)>::mult, S_branch, M_branch);
+
+            auto helper_1 = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).right;
+            auto helper_2 = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).left ;
+
+            auto new_M_tree = ternary<side2, decltype(helper_1), decltype(helper_2)>(helper_1, helper_2);
+
+            auto ret_help_left  = ternary< side1, decltype(new_M_tree), decltype(S_tree)>(new_M_tree, S_tree);
+            auto ret_help_right = ternary<!side1, decltype(new_M_tree), decltype(S_tree)>(new_M_tree, S_tree);
+
+            return op_tree<decltype(ret_help_left), decltype(ret_help_right)>
+                          (OpType<decltype(ret_help_left), decltype(ret_help_right)>::equal,
+                           ret_help_left, ret_help_right);
         }
 
         ///div, MRight
-        template<typename is_op_tree, typename M_op_type, M_op_type M_tree, bool side1, bool side2,
-                 typename std::enable_if<M_tree.operation == OpType<
-                                                                    typename M_op_type::Ltype,
-                                                                    typename M_op_type::Rtype
-                                                                    >::div && side2, EI_type
-                                         >::type...
+        template<int M_tree, bool side1, bool side2, typename is_op_tree,
+                 typename std::enable_if<M_tree == OpType<char,char>::div && side2, EI_type>::type...
                  >
-        inline constexpr const auto extract_known(const is_op_tree& OT)
+        inline constexpr const auto
+        extract_known(const is_op_tree& OT)
         {
+            /*
             using op_base = op_tree<typename is_op_tree::Ltype, typename is_op_tree::Rtype>;
 
             auto S_branch = ((!side1)?OT.right:OT.left); //non-important side
@@ -311,40 +509,118 @@ namespace extract_detail
 
             return op_tree<decltype(side1?new_M_tree:final_S_tree), decltype(!side1?new_M_tree:final_S_tree)>
                           (OpType<decltype(side1?new_M_tree:final_S_tree), decltype(!side1?new_M_tree:final_S_tree)>::equal,
-                           side1?new_M_tree:final_S_tree, !side1?new_M_tree:final_S_tree);
+                           side1?new_M_tree:final_S_tree, !side1?new_M_tree:final_S_tree);*/
+
+            //non-important side
+            auto S_branch = ternary<!side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left);
+
+            auto helper_left  = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).right;
+            auto helper_right = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).left ;
+
+            //clip to opp. side
+            auto M_branch = ternary<!side2, decltype(helper_left), decltype(helper_right)>(helper_left, helper_right);
+
+            auto mid_RHS = op_tree<decltype(S_branch),decltype(M_branch)>
+                                  (OpType<decltype(S_branch),decltype(M_branch)>::div, S_branch, M_branch);
+
+            auto final_S_tree = op_tree<decltype(mid_RHS), long double>
+                                (OpType<decltype(mid_RHS), long double>::div, 1, mid_RHS);
+
+            auto helper_1 = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).right;
+            auto helper_2 = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left).left ;
+
+            auto new_M_tree = ternary<side2, decltype(helper_1), decltype(helper_2)>(helper_1, helper_2);
+
+            auto ret_help_left  = ternary< side1, decltype(new_M_tree), decltype(final_S_tree)>(new_M_tree, final_S_tree);
+            auto ret_help_right = ternary<!side1, decltype(new_M_tree), decltype(final_S_tree)>(new_M_tree, final_S_tree);
+
+            return op_tree<decltype(ret_help_left), decltype(ret_help_right)>
+                          (OpType<decltype(ret_help_left), decltype(ret_help_right)>::equal,
+                           ret_help_left, ret_help_right);
+        }
+    }
+
+    namespace EKM_impl
+    {
+        //only called from EKM, returns tree to remove
+        template<bool B, typename first, typename second, typename std::enable_if<B, EI_type>::type...>
+        inline constexpr const auto
+        M_tree_decider(const first& first_tree, const second& second_tree)
+        {
+            return first_tree;
         }
 
+        template<bool B, typename first, typename second, typename std::enable_if<!B, EI_type>::type...>
+        inline constexpr const auto
+        M_tree_decider(const first& first_tree, const second& second_tree)
+        {
+            return second_tree;
+        }
     }
 
-    template<typename is_op_tree, typename std::enable_if<is_unknown<const typename is_op_tree::Ltype>::value !=
-                                                          is_unknown<const typename is_op_tree::Rtype>::value,
+    //UK = f(C)
+    template<typename is_op_tree, typename std::enable_if<is_unknown_failsafe<const typename is_op_tree::Ltype>::value &&
+                                                          !is_unknown_failsafe<const typename is_op_tree::Rtype>::value,
                                                           EI_type
                                                           >::type...
              >
-    inline constexpr const long double extract_known_main(const is_op_tree& OT)
+    inline constexpr const var<is_op_tree::Ltype::ID, 1>
+    extract_known_main(const is_op_tree& OT)
     {
-        return short_eval(OpType<typename is_op_tree::Ltype, typename is_op_tree::Rtype>::equal, OT.left, OT.right);
+        //non UK side
+        auto N = EKM_impl::M_tree_decider<is_unknown_failsafe<const typename is_op_tree::Ltype>::value,
+                                          decltype(OT.right), decltype(OT.left)
+                                          >(OT.right, OT.left);
+
+        auto C_from_func_C = resolve_impl::resolve(N);
+
+        return short_eval(OT.operation, OT.left, C_from_func_C);
     }
 
-    template<typename is_op_tree, typename std::enable_if<!is_unknown<const typename is_op_tree::Ltype>::value &&
-                                                          !is_unknown<const typename is_op_tree::Rtype>::value,
+    //f(C) = UK
+    template<typename is_op_tree, typename std::enable_if<!is_unknown_failsafe<const typename is_op_tree::Ltype>::value &&
+                                                          is_unknown_failsafe<const typename is_op_tree::Rtype>::value,
                                                           EI_type
                                                           >::type...
              >
-    inline constexpr const long double extract_known_main(const is_op_tree& OT)
+    inline constexpr const var<is_op_tree::Rtype::ID, 1>
+    extract_known_main(const is_op_tree& OT)
     {
-        using namespace extract_impl;
+        //non UK side
+        auto N = EKM_impl::M_tree_decider<is_unknown_failsafe<const typename is_op_tree::Ltype>::value,
+                                          decltype(OT.right), decltype(OT.left)
+                                          >(OT.right, OT.left);
 
-        std::size_t side   = UK_count(OT.right); //0 left 1 right
+        auto C_from_func_C = resolve_impl::resolve(N);
 
-        std::size_t d_side = UK_count((side?OT.right:OT.left).right);
+        return short_eval(OT.operation, C_from_func_C, OT.right);
+    }
 
-        auto M_tree = side?OT.right:OT.left; //node to remove
+    //assumes only 1 UK whole tree
+    template<typename is_op_tree, typename std::enable_if<!is_unknown_failsafe<const typename is_op_tree::Ltype>::value &&
+                                                          !is_unknown_failsafe<const typename is_op_tree::Rtype>::value,
+                                                          EI_type
+                                                          >::type...
+             >
+    inline constexpr const auto
+    extract_known_main(const is_op_tree& OT)
+    {
+        constexpr std::size_t side = UK_count(OT.right); //0 left 1 right
 
-        auto passdown = extract_known<decltype(OT), decltype(M_tree), M_tree, side, d_side>
-                        (OT);
+        auto make_not_prvalue = ternary<side>(OT.right, OT.left).right;
 
-        return extract_known_main(passdown);
+        constexpr std::size_t d_side = UK_count(make_not_prvalue);
+
+        /*std::size_t d_side = UK_count((side?OT.right:OT.left).right);*/
+
+        //node to remove
+        auto M_tree = EKM_impl::M_tree_decider<side>
+                      (OT.right, OT.left);
+
+        //tree with most upcoming operand inverted
+        auto passdown = extract_impl::extract_known<M_tree.operation, side, d_side>(OT);
+
+        return extract_known_main(passdown); //Explicitly handles all "equals" cases, no passdown has equals
     }
 }
 
@@ -355,28 +631,32 @@ namespace PIK
 
     template<typename is_op_tree, typename ntup_type, std::size_t UK_num, std::size_t maxind, std::size_t ind,
              typename std::enable_if<UK_num==1 && ind==(maxind-1), EI_type>::type...>
-    inline constexpr const auto plug_in_knowns(const is_op_tree& OT, const ntup_type& knownlist)
+    inline constexpr const auto
+    plug_in_knowns(const is_op_tree& OT, const ntup_type& knownlist)
     {
         return extract_known_main(OT);
     }
 
     template<typename is_op_tree, typename ntup_type, std::size_t UK_num, std::size_t maxind, std::size_t ind,
              typename std::enable_if<UK_num==1 && ind!=(maxind-1), EI_type>::type...>
-    inline constexpr const auto plug_in_knowns(const is_op_tree& OT, const ntup_type& knownlist)
+    inline constexpr const auto
+    plug_in_knowns(const is_op_tree& OT, const ntup_type& knownlist)
     {
         return extract_known_main(OT);
     }
 
     template<typename is_op_tree, typename ntup_type, std::size_t UK_num, std::size_t maxind, std::size_t ind,
              typename std::enable_if<UK_num!=1 && ind==(maxind-1), EI_type>::type...>
-    inline constexpr const auto plug_in_knowns(const is_op_tree& OT, const ntup_type& knownlist)
+    inline constexpr const auto
+    plug_in_knowns(const is_op_tree& OT, const ntup_type& knownlist)
     {
         return new_information(OT, get<ind>(knownlist));
     }
 
     template<typename is_op_tree, typename ntup_type, std::size_t UK_num, std::size_t maxind, std::size_t ind,
              typename std::enable_if<UK_num!=1 && ind!=(maxind-1), EI_type>::type...>
-    inline constexpr const auto plug_in_knowns(const is_op_tree& OT, const ntup_type& knownlist)
+    inline constexpr const auto
+    plug_in_knowns(const is_op_tree& OT, const ntup_type& knownlist)
     {
         auto Q = new_information(OT, get<ind>(knownlist));
         return plug_in_knowns<decltype(Q), decltype(knownlist), UK_count(Q), maxind, ind+1>
@@ -424,6 +704,8 @@ constexpr int iter_through_equations(const TVAR_TYPE& TARGETVAR, const ntuple_ty
             auto new_knownlist = knownlist.push_front(var_inside);
             */
         }
+
+        //bottom is for case that UK_count is not 1
 
         std::size_t num_of_args = knownlist.get_size();
 
