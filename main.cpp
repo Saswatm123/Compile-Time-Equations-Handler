@@ -50,18 +50,23 @@ int main()
     PERM unknown stuff;
 
     static constexpr const op_tree<op_tree<decltype(acceleration), long double>, long double>
-    first(OpType<op_tree<decltype(acceleration), long double>, long double>::sub, op_tree<decltype(acceleration), long double>(OpType<decltype(acceleration), long double>::add, acceleration, 3), 3);
+    first(OpType<op_tree<decltype(acceleration), long double>, long double>::equal,
+                 op_tree<decltype(acceleration), long double>(OpType<decltype(acceleration), long double>::mult,
+                                                              acceleration,
+                                                              1),
+          8);
 
     /*
     constexpr auto aa = extract_detail::resolve_impl::resolve(first);
 
-    cout << aa;*/
+    cout << aa;
 
     constexpr const op_tree<var<2,0>, op_tree<long double, long double> > finalnamed(OpType<var<2,0>, op_tree<long double, long double> >::equal,acceleration,
-                                                                                     op_tree<long double, long double>(OpType<long double, long double>::add, 1, 2) );
+                                                                                     op_tree<long double, long double>(OpType<long double, long double>::add, 1, 2) );*/
 
 
-    constexpr auto solved = extract_detail::extract_known_main(first);
+    using CXPR_first = CONSTANT(first);
+    constexpr auto solved = extract_detail::extract_known_main(CXPR_first{});
 
     cout << endl << solved.value;
 /*
