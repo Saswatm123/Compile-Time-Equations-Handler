@@ -63,9 +63,9 @@ The only last step is to go to the call to iter_through_equations in main() and 
 
 # Algorithm
  
-I will split this section into two: the first section is the high level logic, which is a general overview of what the program is doing. The second is the low level logic, the actual internal mechanisms of how everything is implemented.
+I will split this section into two: the first section is the high level logic, which is a general overview of what the program is doing. The second is some important parts of the low level logic, some of the important parts of the internal mechanisms of how everything is implemented.
 
-># High level
+# High level
 > Let us create an arbitrary equation group.
  - a+b/c == d^e
  - a-b+c == 4
@@ -90,3 +90,31 @@ turns into this (with desired unknown "a"):
 ![](images_%20for_readme/EQ4.png)
 
 It is fairly trivial to derive the processes for every combination, so I will leave that out.
+
+# Specifics
+
+First, I will go over what PACK() means and why it exists. Constexpr functions are required to be able to be run at runtime if its arguments are not constexpr. This means that I cannot use the arguments in constexpr-guaranteed contexts, such as template non type parameters. However, as the developer, I know that these funtion will only be used at compile time, so it should feel safe using consexpr function arguments in constexpr-guaranteed contexts. My workaround for this lack of a way to declare arguments constexpr was to create a macro that creates an anonymous union that contains a static constexpr function unzip() that returns a value passed into it, as well as a typedef Ctype that lets me do type selection as if it was just a regular value. This lets me encode a value into a type without it changing the type, and since types are resolved at compile time, I can call unpack() on any wrapped type and recieve it as if it was passed in unwrapped, and it is guaranteed to be constexpr.
+
+The program flow starts with a call to iter_through_equations(). I should mention that when I call something a function, it is very likely a family of functions with the same name. As this is at compile time, type is a variable aspect of the state. Iter_through_equations() takes in the target variable, an empty ntuple (just a regular tuple implementation I created), and a variadic argument pack of equations (more specifically, what type the equations resolve to). There are six iter_through_equation()s total, and to explain what they do, I have to explain the type system that makes up an equation.
+
+There is a class template called var<std::size_t, bool>, that takes in two arguments in its template list: its ID number (for tracing it in an operation tree), and whether it is known or not. The Macro 
+```
+known
+```
+is defined as 
+```
+static constexpr const var<ticket(),1>
+```
+while the macro
+```
+unknown
+```
+is defined as
+```
+static constexpr const var<ticket(),0>
+```
+Ignore ticket() for now, it corresponds to a constexpr counting system of retrieving consecutive numbers.
+
+There is a class template called op_tree<LHS,RHS> that holds information about the current operation and what its two subtrees are. These are created from the operators in the equation. Details can be seen in the code. Step 1 in the code allows me to have a user-friendly interface while creating a way to "freeze" equations for later. Op_tree subnodes are only either op_trees, unknowns, or constants. When it comes across a known, it "replaces" it with its value and runs a resolver to see if it "opened up" a tree to being completely evaluated. An equation can resolve to either an op_tree (>1 unknowns), a known(unknown == constant or known), or a bool (constant == constant). Which version of iter_through_equation() to use is decided by SFINAE based on the type of the first equation, with the rest stored away in a variadic argument pack. 
+
+Manually explaining everything that goes on in the program is going to be very verbose and long, so the rest can be figured out from looking at the source files. If anyone has any questions, feel free to post on the forum of this repo.
