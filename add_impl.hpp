@@ -7,6 +7,9 @@
 //inp: K C UK OP
 //op_nodes: UK, op_tree<...>, constant
 
+#ifndef OPER
+    #define OPER inline constexpr const //OPERator return type modifier
+#endif // OPER
 
 template<typename known_check_A, typename known_check_B>
 OPER both_known_ret_type<const known_check_A, const known_check_B> operator+(const known_check_A& lhs, const known_check_B& rhs)

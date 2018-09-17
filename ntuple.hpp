@@ -6,9 +6,16 @@
 template<typename... emptylist>
 struct ntuple
 {
-    inline static constexpr const std::size_t get_size(std::size_t N)
+    inline static constexpr const std::size_t get_size(std::size_t N = 0)
     {
-        return (N+1);
+        return (N);
+    }
+
+    template<typename newtype>
+    constexpr ntuple<newtype>
+    push_front(const newtype& new_arg) const
+    {
+        return ntuple<newtype>(new_arg, *this);
     }
 };
 
@@ -31,12 +38,13 @@ struct ntuple<firstarg, arglist...> : ntuple<arglist...>
         return ntuple<newtype, firstarg, arglist...>(new_arg, *this);
     }
 
-    inline static constexpr const std::size_t get_size(std::size_t N = 0)
+    inline static constexpr const std::size_t
+    get_size(std::size_t N = 0)
     {
         return ntuple<arglist...>::get_size(N+1);
     }
 
-    typedef PACK::pack<arglist...> fwd_types;
+    typedef MY_PACK::pack<arglist...> fwd_types;
 
     typedef firstarg type;
 

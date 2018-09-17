@@ -17,4 +17,22 @@ follows:
  ```
  - The above applies to type aliases as well as metafunctions/expressions.
  
- I will outline the general algorithm here sometime within the next couple commits.
+# Algorithm
+ 
+I will split this section into two: the first section is the high level logic, which is a general overview of what the program is doing. The second is the low level logic, the actual internal mechanisms of how everything is implemented.
+
+># High level
+> Let us create an arbitrary equation group.
+ - a+b/c == d^e
+ - a-b+c == 4
+> Let us assume beforehand that we know that:
+ - a = 1
+ - b = 2
+ - d = 4
+> Given this information, it is clearly visible to us that one can solve for any unknown target variable present (either c or e). The variables are marked either **unknown** or **known**, and when the compiler sees variables arranged with operators in equation form, it creates an operation tree. The operation trees for these two equations would look like this:
+
+![](images_%20for_readme/EQ1.png)
+
+![](images_%20for_readme/EQ2.png)
+
+---Will finish this explanation later---

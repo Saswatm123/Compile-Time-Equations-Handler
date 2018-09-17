@@ -20,13 +20,12 @@ public:
         sub,
         mult,
         div,
-        equal
+        equal,
+        exp
     };
 
     template<typename firsttype, typename secondtype>
     using Ins_OpType = typename op_tree<firsttype,secondtype>::OpType;
-
-    static constexpr const OpType InvOp[4] = {sub, add, div, mult};
 
     const OpType operation;
 
@@ -43,11 +42,12 @@ private:
     struct NI_impl
     {
         template<typename is_op_tree, typename is_known,
-                 typename std::enable_if<std::is_arithmetic<is_op_tree>::value, EI_type>::type...
+                 typename std::enable_if<std::is_arithmetic<const typename is_op_tree::Ctype>::value, EI_type&>::type...
                  >
-        static constexpr const auto NI_sub(const is_op_tree& OT, const is_known& new_inf)
+        static constexpr const auto
+        NI_sub(const is_op_tree& OT_C, const is_known& new_inf_C)
         {
-            return OT;
+            return OT_C.unpack();
         }
 
         struct NI_sub_tree_impl
@@ -62,63 +62,88 @@ private:
                     case 2: return Ins_OpType<LHS_, RHS_>::mult;
                     case 3: return Ins_OpType<LHS_, RHS_>::div;
                     case 4: return Ins_OpType<LHS_, RHS_>::equal;
+                    case 5: return Ins_OpType<LHS_, RHS_>::exp;
                 }
             }
         };
 
-        template<typename is_op_tree, typename is_known, typename std::enable_if<is_generic_op_tree<const is_op_tree>::value, EI_type>::type...>
-        static const auto NI_sub(const is_op_tree& OT, const is_known& new_inf)
+        template<typename is_op_tree, typename is_known,
+                 typename std::enable_if<is_generic_op_tree<const typename is_op_tree::Ctype>::value, EI_type&>::type...
+                 >
+        static constexpr const auto
+        NI_sub(const is_op_tree& OT_C, const is_known& new_inf_C)
         {
-            auto LHS = NI_sub(OT.left , new_inf);
-            auto RHS = NI_sub(OT.right, new_inf);
+            constexpr auto leftside  = OT_C.unpack().left;
+
+            constexpr auto rightside = OT_C.unpack().right;
+
+            using CXPR_left  = PACK(leftside);
+
+            using CXPR_right = PACK(rightside);
+
+            constexpr auto LHS = NI_sub(CXPR_left {}, new_inf_C);
+            constexpr auto RHS = NI_sub(CXPR_right{}, new_inf_C);
 
             return op_tree<decltype(LHS), decltype(RHS)>
-                          (NI_sub_tree_impl::template NI_sub_tree<decltype(LHS), decltype(RHS)>(static_cast<int>(OT.operation)),
-                           LHS, RHS);
+            (NI_sub_tree_impl::template
+             NI_sub_tree<decltype(LHS), decltype(RHS)>(static_cast<int>(OT_C.unpack().operation)), LHS, RHS
+             );
         }
 
         struct NI_sub_UK_impl
         {
+            //found UK's ID matches known's ID
             template<typename is_UK, typename is_known,
-            typename std::enable_if<is_UK::ID==is_known::ID, EI_type>::type...
+            typename std::enable_if<is_UK::Ctype::ID==is_known::Ctype::ID, EI_type&>::type...
                      >
-            static const auto NI_sub_UK(const is_UK& UK, const is_known& new_inf)
+            static constexpr const auto
+            NI_sub_UK(const is_UK& UK_C, const is_known& new_inf_C)
             {
-                return UK.value;
+                return new_inf_C.unpack().value;
             }
 
+            //found UK's ID doesn't match known's ID
             template<typename is_UK, typename is_known,
-            typename std::enable_if<is_UK::ID!=is_known::ID, EI_type>::type...
+            typename std::enable_if<is_UK::Ctype::ID!=is_known::Ctype::ID, EI_type&>::type...
                      >
-            static const auto NI_sub_UK(const is_UK& UK, const is_known& new_inf)
+            static constexpr const auto
+            NI_sub_UK(const is_UK& UK_C, const is_known& new_inf_C)
             {
-                return UK;
+                return UK_C.unpack();
             }
         };
 
         template<typename is_op_tree, typename is_known,
-        typename std::enable_if<is_unknown_failsafe<const is_op_tree>::value, EI_type>::type...>
-        inline static const auto NI_sub(const is_op_tree& OT, const is_known& new_inf)
+        typename std::enable_if<is_unknown_failsafe<const typename is_op_tree::Ctype>::value, EI_type&>::type...>
+        inline static constexpr const auto
+        NI_sub(const is_op_tree& OT_C, const is_known& new_inf_C)
         {
-            return NI_sub_UK_impl::NI_sub_UK(OT, new_inf);
+            return NI_sub_UK_impl::NI_sub_UK(OT_C, new_inf_C);
         }
     };
 
 public:
 
     //overload for known's corresponding unknown being in the tree
-    template<typename is_op_tree, typename is_known, bool has_ID, typename std::enable_if<has_ID, EI_type>::type...>
-    static const auto NI_op_tree(const is_op_tree& OT, const is_known& new_inf)
+    template<bool has_ID, typename is_op_tree, typename is_known, typename std::enable_if<has_ID, EI_type&>::type...>
+    static constexpr auto NI_op_tree(const is_op_tree& OT_C, const is_known& new_inf_C)
     {
+        static_assert(is_generic_op_tree<const typename is_op_tree::Ctype>::value, "First arg is not OP wrapper"    );
+        static_assert(is_known_failsafe <const typename is_known::Ctype  >::value, "Second arg is not Known wrapper");
+
         //check both sides, clip if no matching unknown, eval if there is unknown
-        return NI_impl::NI_sub(OT, new_inf);
+        constexpr auto N = NI_impl::NI_sub(OT_C, new_inf_C);
+
+        typename std::enable_if<is_generic_op_tree<const decltype(N)>::value, int>::type rr = 0;
+
+        return N;
     }
 
     //overload for known's corresponding unknown not being in the tree
-    template<typename is_op_tree, typename is_known, bool has_ID, typename std::enable_if<!has_ID, EI_type>::type...>
-    static const auto NI_op_tree(const is_op_tree& OT, const is_known& new_inf)
+    template<bool has_ID, typename is_op_tree, typename is_known, typename std::enable_if<!has_ID, EI_type&>::type...>
+    static constexpr auto NI_op_tree(const is_op_tree& OT_C, const is_known& new_inf_C)
     {
-        return OT;
+        return OT_C.unpack();
     }
 };
 
