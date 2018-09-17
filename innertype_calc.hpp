@@ -101,4 +101,10 @@ using is_generic_op_tree = typename std::conditional<
       is_generic_op_tree_engine<typename std::remove_reference<outertype>::type>::value,
                       std::true_type, std::false_type>::type;
 
+template<typename T, class = void>
+struct is_wrapper : std::false_type{};
+
+template <typename T>
+struct is_wrapper<T, void_t<typename T::Ctype> > : std::true_type {};
+
 #endif // INNERTYPE_CALC

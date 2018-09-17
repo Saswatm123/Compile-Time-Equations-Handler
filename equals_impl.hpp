@@ -42,7 +42,7 @@ typename std::enable_if<is_known<const known_check_LHS>::value && is_generic_op_
 operator==(const known_check_LHS& lhs, const OP_check_RHS& rhs)
 {
     return op_tree<long double, OP_check_RHS>
-    (OpType<long double, OP_check_RHS>::equal, lhs, rhs);
+    (OpType<long double, OP_check_RHS>::equal, lhs.value, rhs);
 }
 
 template<typename known_check_RHS>
@@ -129,7 +129,7 @@ typename std::enable_if<is_generic_op_tree<const OP_check_LHS>::value, op_tree<O
 operator==(const OP_check_LHS& lhs, const long double& rhs)
 {
     return op_tree<OP_check_LHS, long double>
-    (lhs, rhs);
+    (OpType<OP_check_LHS, long double>::equal, lhs, rhs);
 }
 
 template<typename OP_check_LHS, typename unknown_check_RHS>

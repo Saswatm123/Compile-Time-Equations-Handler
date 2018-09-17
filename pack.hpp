@@ -3,7 +3,7 @@
 
 //dummy struct to typedef variadic type parameters
 
-namespace PACK
+namespace MY_PACK
 {
     template<typename...args>
     struct pack {};
