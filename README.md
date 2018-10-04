@@ -49,9 +49,13 @@ This is intended to be easy for even non-programmers to use. Simply open up equa
  - \- : Subtract
  - \* : Multiply
  - / : Divide
- - ^ : Exponentiate **Crucial: any exponentiation must be inside parentheses due to natural C++ operator precedence putting ^ last.** That means that the formula G = (1-v^2/c^2)^(1/2) ) is written as:
+ - ^ : Exponentiate **Crucial: any exponentiation must be inside parentheses due to natural C++ operator precedence putting ^ last.** That means that the formula
 ```
-    G == (1- (v^2)/(c^2) )^(1/2)
+    G = (1-v^2/c^2)^(1/2) ) 
+```
+is written as:
+```
+    G == (1- (v^2)/(c^2) )^(1.0/2.0)
 ```
 **Crucial: every constant must be specified to at least one point beyond the decimal**, so d = 1/2 * at^2 is written as:
 ```
