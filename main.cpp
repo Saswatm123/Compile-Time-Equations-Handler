@@ -13,7 +13,10 @@
 
 #include <iostream>
 #include <iomanip>
+#include <complex>
+#include <cmath>
 #include "equation_processor.hpp"
+#include "unary_func_type.hpp"
 
 using namespace std;
 
@@ -26,9 +29,8 @@ int main()
 {
     using namespace equation_sheet;
 
-    constexpr auto ans = iter_through_equations(
+    constexpr auto ans = solve(
     TARGVAR{},
-    knownlist{},
     eq1{},
     eq2{}
     );

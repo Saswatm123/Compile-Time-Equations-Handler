@@ -21,7 +21,8 @@ public:
         mult,
         div,
         equal,
-        exp
+        exp,
+        compose
     };
 
     template<typename firsttype, typename secondtype>
@@ -63,6 +64,7 @@ private:
                     case 3: return Ins_OpType<LHS_, RHS_>::div;
                     case 4: return Ins_OpType<LHS_, RHS_>::equal;
                     case 5: return Ins_OpType<LHS_, RHS_>::exp;
+                    case 6: return Ins_OpType<LHS_, RHS_>::compose;
                 }
             }
         };

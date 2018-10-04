@@ -3,8 +3,6 @@
 
 namespace equation_sheet
 {
-    using knownlist = PACK(ntuple<>());
-
     inline namespace
     PUT_VARIABLES_HERE
     {

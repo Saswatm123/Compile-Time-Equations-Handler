@@ -7,48 +7,6 @@
 #include "EIF_filler.hpp"
 #include "OP_numeric.hpp"
 
-//BEGIN FWD DECLARATIONS FOR ITER_THROUGH_EQUATIONS
-
-
-    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
-             typename std::enable_if<std::is_same<bool, typename firstarg::Ctype>::value, EI_type&>::type...>
-    constexpr auto iter_through_equations(const TVAR_TYPE&, const ntuple_type&,
-                                          const firstarg& , const arglist&...);
-
-    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
-             typename std::enable_if<is_generic_op_tree<const typename firstarg::Ctype>::value &&
-             (UK_count_TS<typename firstarg::Ctype>() == 1), EI_type&>::type...>
-    constexpr auto iter_through_equations(const TVAR_TYPE&, const ntuple_type&,
-                                          const firstarg& , const arglist&...);
-
-    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
-             typename std::enable_if<is_generic_op_tree<const typename firstarg::Ctype>::value &&
-             (UK_count_TS<typename firstarg::Ctype>() > 1) &&
-             ntuple_type::Ctype::get_size() != 0, EI_type&>::type...>
-    constexpr auto iter_through_equations(const TVAR_TYPE&, const ntuple_type&,
-                                          const firstarg& , const arglist&...);
-
-    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
-             typename std::enable_if<is_generic_op_tree<const typename firstarg::Ctype>::value &&
-             (UK_count_TS<typename firstarg::Ctype>() > 1) &&
-             ntuple_type::Ctype::get_size() == 0, EI_type&>::type...>
-    constexpr auto iter_through_equations(const TVAR_TYPE&, const ntuple_type&,
-                                          const firstarg& , const arglist&...);
-
-    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
-             typename std::enable_if<is_known<const typename firstarg::Ctype>::value &&
-             TVAR_TYPE::Ctype::ID == firstarg::Ctype::ID, EI_type&>::type...>
-    constexpr auto iter_through_equations(const TVAR_TYPE&, const ntuple_type&,
-                                          const firstarg& , const arglist&...);
-
-    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
-             typename std::enable_if<is_known<const typename firstarg::Ctype>::value &&
-             TVAR_TYPE::Ctype::ID != firstarg::Ctype::ID, EI_type&>::type...>
-    constexpr auto iter_through_equations(const TVAR_TYPE&, const ntuple_type&,
-                                          const firstarg& , const arglist&...);
-
-//END FWD DECLARATIONS FOR ITER_THROUGH_EQUATIONS
-
 template<typename is_op_tree, typename newinf_t,
 typename std::enable_if<is_generic_op_tree<const typename is_op_tree::Ctype>::value &&
                         is_known_failsafe<const typename newinf_t::Ctype>::value, EI_type&>::type...>
@@ -133,6 +91,10 @@ namespace extract_detail
         if(operation == OP::exp)
         {
             return std::pow(lhs,rhs);
+        }
+        if(operation == OP::compose)
+        {
+            ///return resolve_trig_from_compose;
         }
     }
 
@@ -623,153 +585,141 @@ namespace PIK
     }
 }
 
-//firstarg is bool
-template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
-         typename std::enable_if<std::is_same<bool, typename firstarg::Ctype>::value, EI_type&>::type...>
-constexpr auto iter_through_equations(const TVAR_TYPE& TARGETVAR_C, const ntuple_type& knownlist_C,
-                                      const firstarg& current_eq_C, const arglist&... pack_C)
+namespace ITER_THRU_EQ_HOLDER
 {
-    static_assert(current_eq_C.unpack(), "An inequality has occurred, fatal error. You ended up with a \"1==0\" type scenario");
+    /**
+    *   Holds overload protocol for ITE based on current equation state.
+    *   Called from solve()
+    */
 
-    return iter_through_equations(TARGETVAR_C, knownlist_C, pack_C...);
+    //begin fwd declarations
+
+    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
+             typename std::enable_if<std::is_same<bool, typename firstarg::Ctype>::value, EI_type&>::type...>
+    constexpr auto iter_through_equations(const TVAR_TYPE&, const ntuple_type&,
+                                          const firstarg& , const arglist&...);
+
+    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
+             typename std::enable_if<is_generic_op_tree<const typename firstarg::Ctype>::value &&
+             (UK_count_TS<typename firstarg::Ctype>() == 1), EI_type&>::type...>
+    constexpr auto iter_through_equations(const TVAR_TYPE&, const ntuple_type&,
+                                          const firstarg& , const arglist&...);
+
+    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
+             typename std::enable_if<is_generic_op_tree<const typename firstarg::Ctype>::value &&
+             (UK_count_TS<typename firstarg::Ctype>() > 1) &&
+             ntuple_type::Ctype::get_size() != 0, EI_type&>::type...>
+    constexpr auto iter_through_equations(const TVAR_TYPE&, const ntuple_type&,
+                                          const firstarg& , const arglist&...);
+
+    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
+             typename std::enable_if<is_generic_op_tree<const typename firstarg::Ctype>::value &&
+             (UK_count_TS<typename firstarg::Ctype>() > 1) &&
+             ntuple_type::Ctype::get_size() == 0, EI_type&>::type...>
+    constexpr auto iter_through_equations(const TVAR_TYPE&, const ntuple_type&,
+                                          const firstarg& , const arglist&...);
+
+    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
+             typename std::enable_if<is_known<const typename firstarg::Ctype>::value &&
+             TVAR_TYPE::Ctype::ID == firstarg::Ctype::ID, EI_type&>::type...>
+    constexpr auto iter_through_equations(const TVAR_TYPE&, const ntuple_type&,
+                                          const firstarg& , const arglist&...);
+
+    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
+             typename std::enable_if<is_known<const typename firstarg::Ctype>::value &&
+             TVAR_TYPE::Ctype::ID != firstarg::Ctype::ID, EI_type&>::type...>
+    constexpr auto iter_through_equations(const TVAR_TYPE&, const ntuple_type&,
+                                          const firstarg& , const arglist&...);
+
+    //end fwd declarations
+    //begin definitions
+
+    //firstarg is bool
+    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
+             typename std::enable_if<std::is_same<bool, typename firstarg::Ctype>::value, EI_type&>::type...>
+    constexpr auto iter_through_equations(const TVAR_TYPE& TARGETVAR_C, const ntuple_type& knownlist_C,
+                                          const firstarg& current_eq_C, const arglist&... pack_C)
+    {
+        static_assert(current_eq_C.unpack(), "An inequality has occurred, fatal error. You ended up with a \"1==0\" type scenario");
+
+        return ITER_THRU_EQ_HOLDER::iter_through_equations(TARGETVAR_C, knownlist_C, pack_C...);
+    }
+
+    //firstarg is op_tree, UK_count == 1
+    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
+             typename std::enable_if<is_generic_op_tree<const typename firstarg::Ctype>::value &&
+             (UK_count_TS<typename firstarg::Ctype>() == 1), EI_type&>::type...>
+    constexpr auto iter_through_equations(const TVAR_TYPE& TARGETVAR_C, const ntuple_type& knownlist_C,
+                                          const firstarg& current_eq_C, const arglist&... pack_C)
+    {
+        constexpr auto new_known = extract_detail::extract_known_main(current_eq_C);
+
+        using CXPR_new_known = PACK(new_known);
+
+        return ITER_THRU_EQ_HOLDER::iter_through_equations(TARGETVAR_C, knownlist_C, CXPR_new_known{}, pack_C...);
+    }
+
+    //firstarg is op_tree, UK_count > 1, knownlist size != 0
+    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
+             typename std::enable_if<is_generic_op_tree<const typename firstarg::Ctype>::value &&
+             (UK_count_TS<typename firstarg::Ctype>() > 1) &&
+             ntuple_type::Ctype::get_size() != 0, EI_type&>::type...>
+    constexpr auto iter_through_equations(const TVAR_TYPE& TARGETVAR_C, const ntuple_type& knownlist_C,
+                                          const firstarg& current_eq_C, const arglist&... pack_C)
+    {
+        constexpr auto N = PIK::plug_in_knowns<UK_count(current_eq_C.unpack() ), knownlist_C.unpack().get_size(), 0>
+        (current_eq_C, knownlist_C);
+
+        using CXPR_N = PACK(N);
+
+        //if N is known, check if targvar and return. if N is op_tree, continue as normal
+        return ITER_THRU_EQ_HOLDER::iter_through_equations(TARGETVAR_C, knownlist_C, pack_C..., CXPR_N{});
+    }
+
+    //firstarg is op_tree, UK_count > 1, knownlist size == 0
+    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
+             typename std::enable_if<is_generic_op_tree<const typename firstarg::Ctype>::value &&
+             (UK_count_TS<typename firstarg::Ctype>() > 1) &&
+             ntuple_type::Ctype::get_size() == 0, EI_type&>::type...>
+    constexpr auto iter_through_equations(const TVAR_TYPE& TARGETVAR_C, const ntuple_type& knownlist_C,
+                                          const firstarg& current_eq_C, const arglist&... pack_C)
+    {
+        return ITER_THRU_EQ_HOLDER::iter_through_equations(TARGETVAR_C, knownlist_C, pack_C..., current_eq_C);
+    }
+
+    //firstarg is known, matches TVAR's ID
+    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
+             typename std::enable_if<is_known<const typename firstarg::Ctype>::value &&
+             TVAR_TYPE::Ctype::ID == firstarg::Ctype::ID, EI_type&>::type...>
+    constexpr auto iter_through_equations(const TVAR_TYPE& TARGETVAR_C, const ntuple_type& knownlist_C,
+                                          const firstarg& current_eq_C, const arglist&... pack_C)
+    {
+        return current_eq_C.unpack();
+    }
+
+    //firstarg is known, doesn't match TVAR's ID
+    template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
+             typename std::enable_if<is_known<const typename firstarg::Ctype>::value &&
+             TVAR_TYPE::Ctype::ID != firstarg::Ctype::ID, EI_type&>::type...>
+    constexpr auto iter_through_equations(const TVAR_TYPE& TARGETVAR_C, const ntuple_type& knownlist_C,
+                                          const firstarg& current_eq_C, const arglist&... pack_C)
+    {
+        constexpr auto new_knownlist = (knownlist_C.unpack()).push_front(current_eq_C.unpack());
+
+        using CXPR_new_knownlist = PACK(new_knownlist);
+
+        return ITER_THRU_EQ_HOLDER::iter_through_equations(TARGETVAR_C, CXPR_new_knownlist{}, pack_C...);
+    }
 }
 
-//firstarg is op_tree, UK_count == 1
-template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
-         typename std::enable_if<is_generic_op_tree<const typename firstarg::Ctype>::value &&
-         (UK_count_TS<typename firstarg::Ctype>() == 1), EI_type&>::type...>
-constexpr auto iter_through_equations(const TVAR_TYPE& TARGETVAR_C, const ntuple_type& knownlist_C,
-                                      const firstarg& current_eq_C, const arglist&... pack_C)
+template<typename TVAR_TYPE, typename firstarg, typename... arglist>
+constexpr auto solve(const TVAR_TYPE& TARGETVAR_C, const firstarg& current_eq_C, const arglist&... pack_C)
 {
-    constexpr auto new_known = extract_detail::extract_known_main(current_eq_C);
+    constexpr auto N = ntuple<>();
 
-    using CXPR_new_known = PACK(new_known);
+    using CXPR_ntuple = PACK(N);
 
-    return iter_through_equations(TARGETVAR_C, knownlist_C, CXPR_new_known{}, pack_C...);
-}
-
-//firstarg is op_tree, UK_count > 1, knownlist size != 0
-template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
-         typename std::enable_if<is_generic_op_tree<const typename firstarg::Ctype>::value &&
-         (UK_count_TS<typename firstarg::Ctype>() > 1) &&
-         ntuple_type::Ctype::get_size() != 0, EI_type&>::type...>
-constexpr auto iter_through_equations(const TVAR_TYPE& TARGETVAR_C, const ntuple_type& knownlist_C,
-                                      const firstarg& current_eq_C, const arglist&... pack_C)
-{
-    constexpr auto N = PIK::plug_in_knowns<UK_count(current_eq_C.unpack() ), knownlist_C.unpack().get_size(), 0>
-    (current_eq_C, knownlist_C);
-
-    using CXPR_N = PACK(N);
-
-    //if N is known, check if targvar and return. if N is op_tree, continue as normal
-    return iter_through_equations(TARGETVAR_C, knownlist_C, pack_C..., CXPR_N{});
-}
-
-//firstarg is op_tree, UK_count > 1, knownlist size == 0
-template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
-         typename std::enable_if<is_generic_op_tree<const typename firstarg::Ctype>::value &&
-         (UK_count_TS<typename firstarg::Ctype>() > 1) &&
-         ntuple_type::Ctype::get_size() == 0, EI_type&>::type...>
-constexpr auto iter_through_equations(const TVAR_TYPE& TARGETVAR_C, const ntuple_type& knownlist_C,
-                                      const firstarg& current_eq_C, const arglist&... pack_C)
-{
-    return iter_through_equations(TARGETVAR_C, knownlist_C, pack_C..., current_eq_C);
-}
-
-//firstarg is known, matches TVAR's ID
-template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
-         typename std::enable_if<is_known<const typename firstarg::Ctype>::value &&
-         TVAR_TYPE::Ctype::ID == firstarg::Ctype::ID, EI_type&>::type...>
-constexpr auto iter_through_equations(const TVAR_TYPE& TARGETVAR_C, const ntuple_type& knownlist_C,
-                                      const firstarg& current_eq_C, const arglist&... pack_C)
-{
-    return current_eq_C.unpack();
-}
-
-//firstarg is known, doesn't match TVAR's ID
-template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist,
-         typename std::enable_if<is_known<const typename firstarg::Ctype>::value &&
-         TVAR_TYPE::Ctype::ID != firstarg::Ctype::ID, EI_type&>::type...>
-constexpr auto iter_through_equations(const TVAR_TYPE& TARGETVAR_C, const ntuple_type& knownlist_C,
-                                      const firstarg& current_eq_C, const arglist&... pack_C)
-{
-    constexpr auto new_knownlist = (knownlist_C.unpack()).push_front(current_eq_C.unpack());
-
-    using CXPR_new_knownlist = PACK(new_knownlist);
-
-    return iter_through_equations(TARGETVAR_C, CXPR_new_knownlist{}, pack_C...);
+    return ITER_THRU_EQ_HOLDER::iter_through_equations(TARGETVAR_C, CXPR_ntuple{}, current_eq_C, pack_C...);
 }
 
 #endif // CMD_LIST
-
-/**
-template<typename TVAR_TYPE, typename ntuple_type, typename firstarg, typename... arglist>
-constexpr int iter_through_equations(const TVAR_TYPE& TARGETVAR, const ntuple_type& knownlist,
-                                     const firstarg& current_eq, const arglist&... pack)
-{
-    const std::size_t depth = sizeof...(arglist);
-
-    typedef firstarg current_type;
-
-    if(is_known_failsafe<const current_type>::value)
-    {
-        if(current_eq.ID == TARGETVAR.ID)
-        {
-            return -1; //if value prob put in own func with same return type as this func
-        }
-
-        auto new_knownlist = knownlist.push_front(current_eq);
-
-        //remove this eq from eqlist
-    }
-
-    if(std::is_same<current_type, bool>::value)
-    {
-        if(current_eq == 0)
-        {
-            return NAN;
-        }
-
-        //remove current eq from eqlist
-    }
-
-    if(is_generic_op_tree<firstarg>::value)
-    {
-        if(UK_count(current_eq) == 1)
-        {
-            //liberate hidden var, return resulting known
-
-            auto var_inside = extract_known(current_eq);
-            auto new_knownlist = knownlist.push_front(var_inside);
-
-        }
-
-        //bottom is for case that UK_count is not 1
-
-        std::size_t num_of_args = knownlist.get_size();
-
-        for(int a = 0; a<num_of_args; a++)
-        {
-
-            auto resultholder = new_information(current_eq, get<a>(knownlist) );
-            if(is_known_failsafe<const decltype(resultholder)>::value)
-            {
-                //forward to self with updated current.
-            }
-            if(//is op tree)
-            {
-                update this and put it in back of tracklist. continue as normal.
-            }
-
-        }
-
-        //plug in knownlist into current eq and record result. if known/bool, direct to
-        //recursive function by calling this function with exact same args with modified firstarg.
-        //else, record this by plugging in as last arg
-
-    }
-
-    return 4;
-}
-
-*/

@@ -41,6 +41,7 @@ UK_count(const op_tree_piece& OT, std::size_t count)
     return UK_count(OT.left, count) + UK_count(OT.right, count);
 }
 
+// !op_tree && !unknown, includes constant, unary_ftype
 template<typename op_tree_piece>
 inline constexpr const
 typename std::enable_if<!is_generic_op_tree<const op_tree_piece>::value && !is_unknown_failsafe<const op_tree_piece>::value, std::size_t>::type
