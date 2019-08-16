@@ -19,51 +19,64 @@ follows:
  
 # Usage
 
-This is intended to be easy for even non-programmers to use. Simply open up equation_sheet.hpp and put the following information into each namespace:
-- **PUT_VARIABLES_HERE** is where the variables belong (both known and unknown). To declare a known named A with value 6, the syntax is:
-```
-    known A(6);
-```
- To declare an unknown named B, the syntax is as follows:
+**A Working Sample program is included with comments in main.cpp and equation_sheet.hpp (these are the only two a user should be seeing anyway), so if any uncertainties persist, see those files and run the provided sample program**
+
+This is intended to be easy for even non-programmers to use. Simply open up equation_sheet.hpp and put the following information into the file in plaintext:
+
+ For declaring a **known** named Current with a value of 6, the syntax is:
  ```
-     unknown B;
+    known Current(6)
  ```
-- **PUT_TARGET_VARIABLE_HERE** is where you indicate which variable you wish to solve for. To set a variable called time as the target variable, the following syntax is used:
-```
-    using TARGVAR = PACK(time);
-```
- Two things must be ensured: that the type alias is called TARGVAR, and that it is wrapped in PACK() (will go into detail in the algorithm section later).
  
-- **PUT_EQUATIONS_HERE** is where you write down the equations you wish to use. To use the formula F = ma, with name Newton_First_Law, the following syntax is used:
+ For declaring an **unknown** named Voltage, the syntax is:
+ ```
+    unknown Voltage
+ ```
+ 
+- To declare one variable as the **Target Variable**, the Variable you want to solve for, you use the following syntax:
+ ```
+    //For a target unknown variable named Lifespan, with Lifespan declared previously.
+    TARGET(Lifespan)
+ ```
+ 
+- To declare **equations**, the following syntax is used:
 ```
-    using Newton_First_Law = PACK(force == mass * acceleration);
+    //This equation is given the name Newton_Third_Law, and the Variables f, m, and a are declared previously.
+    EQUATION(Newton_Third_Law, f == m * a)
     
-    //The reason I did not use f, m, and a as variable names are to prevent potential name collision,
-    //and it is always good to use names where you know nothing will have the same name as something else
-    //(ex. "I" can refer to both Impedance and Current, and when writing large tables of equations, it is best
-    //to not put yourself in this situation)
+    //The naming of the equations happens in the first field of the macro EQUATION, 
+    //so no external declaration is required.
 ```
+
+**Important:** The equation name is typed without quotation marks, the backend converts it into a string automatically using macro magic.
 
  The equation names can be anything, but a crucial piece of syntax is wrapping the equation in PACK(). Without this, the program will    not run correctly. The operators are:
  - \+ : Add
  - \- : Subtract
  - \* : Multiply
  - / : Divide
- - ^ : Exponentiate **Crucial: any exponentiation must be inside parentheses due to natural C++ operator precedence putting ^ last.** That means that the formula
+ - ^ : Exponentiate 
+
+**Crucial: any exponentiation must be inside parentheses due to natural C++ operator precedence putting ^ last.** That means that the formula
 ```
-    G = (1-v^2/c^2)^(1/2) ) 
+    G = (1 - v^2 / c^2 )^(1.0/2.0) ) 
 ```
 is written as:
 ```
-    G == (1- (v^2)/(c^2) )^(1.0/2.0)
-```
-**Crucial: every constant must be specified to at least one point beyond the decimal**, so d = 1/2 * at^2 is written as:
-```
- d == (1.0/2.0) * a * (t^2);
- //note: the spaces are not neccessary, they are there only for clarity. 
+    G == (1 - (v^2) / (c^2) )^(1.0/2.0)
 ```
 
-The only last step is to go to the call to iter_through_equations in main() and insert the names of every equation followed by "{}" after the passing in of "knownlist". There is sample code already written in main(), so just follow along with that.
+To solve the equations for the target variable, use the following syntax:
+
+```
+    //For considering the equations given the names eq_1, eq_2. Equations are allowed to be useless, as the program will
+    //discard useless equations. This is in the spirit of allowing a user to copy/paste large sets of equations, and only change
+    //what variables are known vs unknown.
+    
+    SOLVE(eq_1, eq_2)
+```
+
+**A Working Sample program is included with comments in main.cpp and equation_sheet.hpp (these are the only two a user should be seeing anyway), so if any uncertainties persist, see those files and run the provided sample program**
 
 # Algorithm
  
