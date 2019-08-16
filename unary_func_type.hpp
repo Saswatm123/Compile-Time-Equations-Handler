@@ -10,6 +10,8 @@ class unary_ftype
 {
 public:
 
+    static const bool _is_unary_ftype = 1;
+
     enum operation_list
     {
            sin,    cos,    tan,    csc,    sec,    cot,

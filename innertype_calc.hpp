@@ -107,4 +107,22 @@ struct is_wrapper : std::false_type{};
 template <typename T>
 struct is_wrapper<T, void_t<typename T::Ctype> > : std::true_type {};
 
+template<typename T, class = void>
+struct is_unary_ftype : std::false_type{};
+
+template<typename T>
+struct is_unary_ftype<T, void_t<typename std::enable_if<T::_is_unary_ftype, EI_type&>::type> > : std::true_type{};
+
+template<typename T, class = void>
+struct LD_if_arithmetic
+{
+    typedef T type;
+};
+
+template<typename T>
+struct LD_if_arithmetic<T, void_t<typename std::enable_if<std::is_arithmetic<T>::value, EI_type&>::type> >
+{
+    typedef long double type;
+};
+
 #endif // INNERTYPE_CALC

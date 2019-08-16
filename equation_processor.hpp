@@ -7,6 +7,7 @@
 
 #define PERM static constexpr const
 
+#include <cmath>
 #include "add_impl.hpp"
 #include "cmd_list.hpp"
 #include "CT_counter.hpp"
@@ -31,10 +32,16 @@
 #define known   static constexpr const var<ticket(),1>
 #define unknown static constexpr const var<ticket(),0>
 
-#include "equation_sheet.hpp"
+#define EQUATION(eq_name, equation_content) \
+using eq_name = PACK(equation_content);
 
-#undef known
-#undef unknown
+#define TARGET(variable) \
+using TARGVAR = PACK(variable);
+
+#define SOLVE(...) \
+ITER_THRU_EQ_HOLDER::solve(TARGVAR{}, __VA_ARGS__);
+
+#include "ES_namespace_indr.hpp"
 
 #undef PERM
 #undef OPER

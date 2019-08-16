@@ -6,6 +6,8 @@
 #include "ntuple.hpp"
 #include "EIF_filler.hpp"
 #include "OP_numeric.hpp"
+#include "unary_func_type.hpp"
+#include "math_func_impl.hpp"
 
 template<typename is_op_tree, typename newinf_t,
 typename std::enable_if<is_generic_op_tree<const typename is_op_tree::Ctype>::value &&
@@ -22,7 +24,29 @@ new_information(const is_op_tree& basetree_C, const newinf_t& newinf_C)
     constexpr auto N = is_op_tree::Ctype::template NI_op_tree<has_noted_ID(basetree_C.unpack(), newinf_C.unpack().ID)>(basetree_C, newinf_C);
 
     return N;
+}
 
+namespace override_std
+{
+    ///If input is arithmetic, returns input translated to long double.
+    ///Else return same object
+    template<typename T,
+             typename std::enable_if<std::is_arithmetic<T>::value, EI_type&>::type...
+             >
+    inline constexpr const long double
+    convert_unary_std_type(T t)
+    {
+        return static_cast<long double>(t);
+    }
+
+    template<typename T,
+             typename std::enable_if<!std::is_arithmetic<T>::value, EI_type&>::type...
+             >
+    inline constexpr const T
+    convert_unary_std_type(T t)
+    {
+        return t;
+    }
 }
 
 //Contains tree inversion algos, known extraction, resolution + eval
@@ -94,9 +118,57 @@ namespace extract_detail
         }
         if(operation == OP::compose)
         {
-            ///return resolve_trig_from_compose;
+            std::cout << "\nSHOULD NOT BE SEEING, COMPOSE SHOULD BE GOING TO FUNCTION BELOW";
         }
     }
+
+    //SE should assume operation is not equals, have handler filter out
+    inline constexpr const long double
+    short_eval(int operation, const unary_ftype lhs, const long double rhs, const int unary_signature)
+    {
+        switch(unary_signature)
+        {
+        case 0:
+            return sin(rhs);
+            break;
+        case 1:
+            return cos(rhs);
+            break;
+        case 2:
+            return tan(rhs);
+            break;
+        case 3:
+            return csc(rhs);
+            break;
+        case 4:
+            return sec(rhs);
+            break;
+        case 5:
+            return cot(rhs);
+            break;
+        case 6:
+            return arcsin(rhs);
+            break;
+        case 7:
+            return arccos(rhs);
+            break;
+        case 8:
+            return arctan(rhs);
+            break;
+        case 9:
+            return arccsc(rhs);
+            break;
+        case 10:
+            return arcsec(rhs);
+            break;
+        case 11:
+            return arccot(rhs);
+            break;
+        default:
+            std::cout << "\nShould not be seeing, index out of range";
+        }
+    }
+
 
     namespace resolve_impl
     {
@@ -107,27 +179,49 @@ namespace extract_detail
         *   side branch
         */
 
+        ///TODO, CC CO OC OO UO UC
+
         //Begin fwd declarations
 
+            //U-O
+            template<typename is_op_tree, typename std::enable_if<is_unary_ftype<typename is_op_tree::Ltype>::value &&
+                                                                  is_generic_op_tree<typename is_op_tree::Rtype>::value, EI_type&
+                                                                  >::type...>
+            inline constexpr const long double
+            resolve(const is_op_tree&);
+
+            //U-C
+            template<typename is_op_tree, typename std::enable_if<is_unary_ftype<typename is_op_tree::Ltype>::value &&
+                                                                  std::is_arithmetic<typename is_op_tree::Rtype>::value, EI_type&
+                                                                  >::type...>
+            inline constexpr const long double
+            resolve(const is_op_tree&);
+
+            //O-C
             template<typename is_op_tree, typename std::enable_if<std::is_arithmetic<typename is_op_tree::Rtype>::value &&
-                                                   !std::is_arithmetic<typename is_op_tree::Ltype>::value, EI_type&>::type...>
+                                                                  is_generic_op_tree<const typename is_op_tree::Ltype>::value, EI_type&
+                                                                  >::type...>
             inline constexpr const long double
             resolve(const is_op_tree&);
 
+            //C-O
             template<typename is_op_tree, typename std::enable_if<std::is_arithmetic<typename is_op_tree::Ltype>::value &&
-                                                   !std::is_arithmetic<typename is_op_tree::Rtype>::value, EI_type&>::type...>
+                                                                  is_generic_op_tree<const typename is_op_tree::Rtype>::value, EI_type&
+                                                                  >::type...>
             inline constexpr const long double
             resolve(const is_op_tree&);
 
+            //O-O
             template<typename is_op_tree,
-                     typename std::enable_if<!std::is_arithmetic<typename is_op_tree::Ltype>::value &&
-                                             !std::is_arithmetic<typename is_op_tree::Rtype>::value,
+                     typename std::enable_if<is_generic_op_tree<const typename is_op_tree::Ltype>::value &&
+                                             is_generic_op_tree<const typename is_op_tree::Rtype>::value,
                                              EI_type&
                                              >::type...
                      >
             inline constexpr const long double
             resolve(const is_op_tree&);
 
+            //C-C
             template<typename is_op_tree, typename std::enable_if<std::is_arithmetic<typename is_op_tree::Ltype>::value &&
                                                                   std::is_arithmetic<typename is_op_tree::Rtype>::value,
                                                                   EI_type&
@@ -147,6 +241,27 @@ namespace extract_detail
             return val;
         }
 
+        ///U-O
+        template<typename is_op_tree, typename std::enable_if<is_unary_ftype<typename is_op_tree::Ltype>::value &&
+                                                              is_generic_op_tree<const typename is_op_tree::Rtype>::value, EI_type&
+                                                              >::type...>
+        inline constexpr const long double
+        resolve(const is_op_tree& OT)
+        {
+            return short_eval(OT.operation, OT.left, resolve(OT.right), OT.left.indicator);
+        }
+
+        ///U-C
+        template<typename is_op_tree, typename std::enable_if<is_unary_ftype<typename is_op_tree::Ltype>::value &&
+                                                              std::is_arithmetic<typename is_op_tree::Rtype>::value, EI_type&
+                                                              >::type...>
+        inline constexpr const long double
+        resolve(const is_op_tree& OT)
+        {
+            return short_eval(OT.operation, OT.left, OT.right, OT.left.indicator);
+        }
+
+        ///C-C
         template<typename is_op_tree, typename std::enable_if<std::is_arithmetic<typename is_op_tree::Ltype>::value &&
                                                               std::is_arithmetic<typename is_op_tree::Rtype>::value,
                                                               EI_type&
@@ -158,25 +273,32 @@ namespace extract_detail
             return short_eval(OT.operation, OT.left, OT.right);
         }
 
-        template<typename is_op_tree, typename std::enable_if<std::is_arithmetic<typename is_op_tree::Rtype>::value &&
-                                               !std::is_arithmetic<typename is_op_tree::Ltype>::value, EI_type&>::type...>
+        ///O-C
+        template<typename is_op_tree,
+                 typename std::enable_if<std::is_arithmetic<typename is_op_tree::Rtype>::value &&
+                                         is_generic_op_tree<const typename is_op_tree::Ltype>::value, EI_type&
+                                         >::type...>
         inline constexpr const long double
         resolve(const is_op_tree& OT)
         {
             return short_eval(OT.operation, resolve(OT.left), OT.right);
         }
 
-        template<typename is_op_tree, typename std::enable_if<std::is_arithmetic<typename is_op_tree::Ltype>::value &&
-                                               !std::is_arithmetic<typename is_op_tree::Rtype>::value, EI_type&>::type...>
+        ///C-O
+        template<typename is_op_tree,
+                 typename std::enable_if<std::is_arithmetic<typename is_op_tree::Ltype>::value &&
+                                         is_generic_op_tree<const typename is_op_tree::Rtype>::value, EI_type&
+                                         >::type...>
         inline constexpr const long double
         resolve(const is_op_tree& OT)
         {
             return short_eval(OT.operation, OT.left, resolve(OT.right) );
         }
 
+        ///O-O
         template<typename is_op_tree,
-                 typename std::enable_if<!std::is_arithmetic<typename is_op_tree::Ltype>::value &&
-                                         !std::is_arithmetic<typename is_op_tree::Rtype>::value,
+                 typename std::enable_if<is_generic_op_tree<const typename is_op_tree::Ltype>::value &&
+                                         is_generic_op_tree<const typename is_op_tree::Rtype>::value,
                                          EI_type&
                                          >::type...
                  >
@@ -185,7 +307,6 @@ namespace extract_detail
         {
             return short_eval(OT.operation, resolve(OT.left), resolve(OT.right));
         }
-
     }
 
     namespace extract_impl
@@ -443,6 +564,218 @@ namespace extract_detail
                           (OpType<decltype(ret_help_left), decltype(ret_help_right)>::equal,
                            ret_help_left, ret_help_right);
         }
+
+        ///unary compose
+        template<int M_tree, bool side1, bool side2, typename is_op_tree,
+                 typename std::enable_if<M_tree == OpType<char,char>::compose, EI_type&
+                                         >::type...
+                 >
+        inline constexpr const auto
+        extract_known(const is_op_tree& OT)
+        {
+            //non M1 side
+            auto S_branch = ternary<!side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left);
+
+            //M1 branch
+            auto M_branch = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left);
+
+            //M2 branch
+            auto M2_branch = ternary<side2, decltype(M_branch.right), decltype(M_branch.left)>(M_branch.right, M_branch.left);
+
+            /**
+            *   new_S_branch = op_tree<...>(arcsin, S_branch)
+            *   new_M_branch = M_branch.right
+            *   connect with equals
+            */
+
+            switch(M_branch.left.indicator)
+            {
+            case 0: //sin
+                {
+                    auto new_S_branch = override_std::convert_unary_std_type( arcsin(S_branch) );
+
+                    auto new_M_branch = M2_branch;
+
+                    auto leftbranch  = ternary<!side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    return op_tree<decltype(leftbranch), decltype(rightbranch)>
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+
+                    break;
+                }
+            case 1: //cos
+                {
+                    auto new_S_branch = override_std::convert_unary_std_type( arccos(S_branch) );
+
+                    auto new_M_branch = M2_branch;
+
+                    auto leftbranch  = ternary<!side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    return op_tree<decltype(leftbranch), decltype(rightbranch)>
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+
+                    break;
+                }
+            case 2: //tan
+                {
+                    auto new_S_branch = override_std::convert_unary_std_type( arctan(S_branch) );
+
+                    auto new_M_branch = M2_branch;
+
+                    auto leftbranch  = ternary<!side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    return op_tree<decltype(leftbranch), decltype(rightbranch)>
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+
+                    break;
+                }
+            case 3: //csc
+                {
+                    auto new_S_branch = override_std::convert_unary_std_type( arccsc(S_branch) );
+
+                    auto new_M_branch = M2_branch;
+
+                    auto leftbranch  = ternary<!side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    return op_tree<decltype(leftbranch), decltype(rightbranch)>
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+
+                    break;
+                }
+            case 4: //sec
+                {
+                    auto new_S_branch = override_std::convert_unary_std_type( arcsec(S_branch) );
+
+                    auto new_M_branch = M2_branch;
+
+                    auto leftbranch  = ternary<!side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    return op_tree<decltype(leftbranch), decltype(rightbranch)>
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+
+                    break;
+                }
+            case 5: //cot
+                {
+                    auto new_S_branch = override_std::convert_unary_std_type( arccot(S_branch) );
+
+                    auto new_M_branch = M2_branch;
+
+                    auto leftbranch  = ternary<!side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    return op_tree<decltype(leftbranch), decltype(rightbranch)>
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+
+                    break;
+                }
+            case 6: //arcsin
+                {
+                    auto new_S_branch = override_std::convert_unary_std_type( sin(S_branch) );
+
+                    auto new_M_branch = M2_branch;
+
+                    auto leftbranch  = ternary<!side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    return op_tree<decltype(leftbranch), decltype(rightbranch)>
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+
+                    break;
+                }
+            case 7: //arccos
+                {
+                    auto new_S_branch = override_std::convert_unary_std_type( cos(S_branch) );
+
+                    auto new_M_branch = M2_branch;
+
+                    auto leftbranch  = ternary<!side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    return op_tree<decltype(leftbranch), decltype(rightbranch)>
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+
+                    break;
+                }
+            case 8: //arctan
+                {
+                    auto new_S_branch = override_std::convert_unary_std_type( tan(S_branch) );
+
+                    auto new_M_branch = M2_branch;
+
+                    auto leftbranch  = ternary<!side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    return op_tree<decltype(leftbranch), decltype(rightbranch)>
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+
+                    break;
+                }
+            case 9: //arccsc
+                {
+                    auto new_S_branch = override_std::convert_unary_std_type( csc(S_branch) );
+
+                    auto new_M_branch = M2_branch;
+
+                    auto leftbranch  = ternary<!side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    return op_tree<decltype(leftbranch), decltype(rightbranch)>
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+
+                    break;
+                }
+            case 10: //arcsec
+                {
+                    auto new_S_branch = override_std::convert_unary_std_type( sec(S_branch) );
+
+                    auto new_M_branch = M2_branch;
+
+                    auto leftbranch  = ternary<!side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    return op_tree<decltype(leftbranch), decltype(rightbranch)>
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+
+                    break;
+                }
+            case 11: //arccot
+                {
+                    auto new_S_branch = override_std::convert_unary_std_type( cot(S_branch) );
+
+                    auto new_M_branch = M2_branch;
+
+                    auto leftbranch  = ternary<!side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
+
+                    return op_tree<decltype(leftbranch), decltype(rightbranch)>
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+
+                    break;
+                }
+            default:
+                std::cout << "\nSHOULD NOT BE SEEING";
+            }
+
+        }
+
     }
 
     namespace EKM_impl
@@ -462,6 +795,25 @@ namespace extract_detail
             return second_tree;
         }
     }
+
+    //  Following two functions are the calls to short_eval from the EKM functions
+    //  further down. Forwarded to accommodate for possibility of unary left node
+
+    template<typename leftop, typename rightop,
+             typename std::enable_if<is_unary_ftype<leftop>::value, EI_type&>::type...>
+    constexpr auto short_eval_resolve_unary_call(const int A, leftop LHS, rightop RHS)
+    {
+        return short_eval(A, LHS, RHS, LHS.indicator);
+    }
+
+    template<typename leftop, typename rightop,
+             typename std::enable_if<!is_unary_ftype<leftop>::value, EI_type&>::type...>
+    constexpr auto short_eval_resolve_unary_call(const int A, leftop LHS, rightop RHS)
+    {
+        return short_eval(A, LHS, RHS);
+    }
+
+    //  End short_eval forwarding
 
     //UK = f(C)
     template<typename is_op_tree, typename std::enable_if<is_unknown_failsafe<const typename is_op_tree::Ctype::Ltype>::value &&
@@ -710,16 +1062,16 @@ namespace ITER_THRU_EQ_HOLDER
 
         return ITER_THRU_EQ_HOLDER::iter_through_equations(TARGETVAR_C, CXPR_new_knownlist{}, pack_C...);
     }
-}
 
-template<typename TVAR_TYPE, typename firstarg, typename... arglist>
-constexpr auto solve(const TVAR_TYPE& TARGETVAR_C, const firstarg& current_eq_C, const arglist&... pack_C)
-{
-    constexpr auto N = ntuple<>();
+    template<typename TVAR_TYPE, typename firstarg, typename... arglist>
+    constexpr auto solve(const TVAR_TYPE& TARGETVAR_C, const firstarg& current_eq_C, const arglist&... pack_C)
+    {
+        constexpr auto N = ntuple<>();
 
-    using CXPR_ntuple = PACK(N);
+        using CXPR_ntuple = PACK(N);
 
-    return ITER_THRU_EQ_HOLDER::iter_through_equations(TARGETVAR_C, CXPR_ntuple{}, current_eq_C, pack_C...);
+        return ITER_THRU_EQ_HOLDER::iter_through_equations(TARGETVAR_C, CXPR_ntuple{}, current_eq_C, pack_C...);
+    }
 }
 
 #endif // CMD_LIST

@@ -13,24 +13,15 @@
 
 #include <iostream>
 #include <iomanip>
-#include <complex>
-#include <cmath>
 #include "equation_processor.hpp"
-#include "unary_func_type.hpp"
 
 using namespace std;
-
-/**
-*   BASE SAFE FUNCS ARE GET, UK_COUNT, HAS_NOTED_ID, NI_SUB_TREE, SHORT_EVAL, TERNARY,
-*   RESOLVE(COMPLIMENTARY), M_TREE_DECIDER
-*/
 
 int main()
 {
     using namespace equation_sheet;
 
-    constexpr auto ans = solve(
-    TARGVAR{},
+    constexpr auto ans = SOLVE(
     eq1{},
     eq2{}
     );

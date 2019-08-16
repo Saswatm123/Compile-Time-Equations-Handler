@@ -313,7 +313,7 @@ arccot(const is_OP& OP)
 //begin f(C)
 
 template<typename is_constant,
-         typename std::enable_if<is_arithmetic<const is_constant>::value, EI_type&>::type...>
+         typename std::enable_if<std::is_arithmetic<const is_constant>::value, EI_type&>::type...>
 OPER long double
 csc(const is_constant& num)
 {
@@ -321,7 +321,7 @@ csc(const is_constant& num)
 }
 
 template<typename is_constant,
-         typename std::enable_if<is_arithmetic<const is_constant>::value, EI_type&>::type...>
+         typename std::enable_if<std::is_arithmetic<const is_constant>::value, EI_type&>::type...>
 OPER long double
 sec(const is_constant& num)
 {
@@ -329,7 +329,7 @@ sec(const is_constant& num)
 }
 
 template<typename is_constant,
-         typename std::enable_if<is_arithmetic<const is_constant>::value, EI_type&>::type...>
+         typename std::enable_if<std::is_arithmetic<const is_constant>::value, EI_type&>::type...>
 OPER long double
 cot(const is_constant& num)
 {
@@ -337,7 +337,7 @@ cot(const is_constant& num)
 }
 
 template<typename is_constant,
-         typename std::enable_if<is_arithmetic<const is_constant>::value, EI_type&>::type...>
+         typename std::enable_if<std::is_arithmetic<const is_constant>::value, EI_type&>::type...>
 OPER long double
 arcsin(const is_constant& num)
 {
@@ -345,7 +345,7 @@ arcsin(const is_constant& num)
 }
 
 template<typename is_constant,
-         typename std::enable_if<is_arithmetic<const is_constant>::value, EI_type&>::type...>
+         typename std::enable_if<std::is_arithmetic<const is_constant>::value, EI_type&>::type...>
 OPER long double
 arccos(const is_constant& num)
 {
@@ -353,7 +353,7 @@ arccos(const is_constant& num)
 }
 
 template<typename is_constant,
-         typename std::enable_if<is_arithmetic<const is_constant>::value, EI_type&>::type...>
+         typename std::enable_if<std::is_arithmetic<const is_constant>::value, EI_type&>::type...>
 OPER long double
 arctan(const is_constant& num)
 {
@@ -361,7 +361,7 @@ arctan(const is_constant& num)
 }
 
 template<typename is_constant,
-         typename std::enable_if<is_arithmetic<const is_constant>::value, EI_type&>::type...>
+         typename std::enable_if<std::is_arithmetic<const is_constant>::value, EI_type&>::type...>
 OPER long double
 arccsc(const is_constant& num)
 {
@@ -369,7 +369,7 @@ arccsc(const is_constant& num)
 }
 
 template<typename is_constant,
-         typename std::enable_if<is_arithmetic<const is_constant>::value, EI_type&>::type...>
+         typename std::enable_if<std::is_arithmetic<const is_constant>::value, EI_type&>::type...>
 OPER long double
 arcsec(const is_constant& num)
 {
@@ -377,7 +377,7 @@ arcsec(const is_constant& num)
 }
 
 template<typename is_constant,
-         typename std::enable_if<is_arithmetic<const is_constant>::value, EI_type&>::type...>
+         typename std::enable_if<std::is_arithmetic<const is_constant>::value, EI_type&>::type...>
 OPER long double
 arccot(const is_constant& num)
 {
