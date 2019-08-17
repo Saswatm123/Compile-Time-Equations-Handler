@@ -50,7 +50,7 @@ This is intended to be easy for even non-programmers to use. Simply open up equa
 
 **Important:** The equation name is typed without quotation marks, the backend converts it into a string automatically using macro magic.
 
- The equation names can be anything, but a crucial piece of syntax is wrapping the equation in PACK(). Without this, the program will    not run correctly. The operators are:
+The operators are:
  - \+ : Add
  - \- : Subtract
  - \* : Multiply
