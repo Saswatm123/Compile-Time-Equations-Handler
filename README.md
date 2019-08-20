@@ -1,5 +1,7 @@
 # Compile-Time-Equations-Handler
 
+**Compilation instructions at bottom.**
+
 This is a work in progress. Anyone may feel free to contribute, but I'm mainly putting this up to make viewing history easier and get used to Git.
 
 This is a **Compile Time** Equations Handler. It is handed equations at **compile** time, along with the values of known variables and uses Template Metaprogramming
@@ -65,6 +67,20 @@ is written as:
 ```
     G == (1 - (v^2) / (c^2) )^(1.0/2.0)
 ```
+
+Unary Functions that this solver also supports are:
+ - sin
+ - cos
+ - tan
+ - csc
+ - sec
+ - cot
+ - arcsin
+ - arccos
+ - arctan
+ - arccsc
+ - arcsec
+ - arccot
 
 To solve the equations for the target variable, use the following syntax:
 
@@ -135,3 +151,20 @@ Ignore ticket() for now, it corresponds to a constexpr counting system of retrie
 There is a class template called op_tree<LHS,RHS> that holds information about the current operation and what its two subtrees are. These are created from the operators in the equation. Details can be seen in the code. Step 1 in the code allows me to have a user-friendly interface while creating a way to "freeze" equations for later. Op_tree subnodes are only either op_trees, unknowns, or constants. When it comes across a known, it "replaces" it with its value and runs a resolver to see if it "opened up" a tree to being completely evaluated. An equation can resolve to either an op_tree (>1 unknowns), a known(unknown == constant or known), or a bool (constant == constant). Which version of iter_through_equation() to use is decided by SFINAE based on the type of the first equation, with the rest stored away in a variadic argument pack. 
 
 Manually explaining everything that goes on in the program is going to be very verbose and long, so the rest can be figured out from looking at the source files. If anyone has any questions, feel free to post on the forum of this repo.
+
+# Compilation Instructions
+
+GCC < 7.1 has fatal compiler bugs that cause this program to not compile.
+I used GCC 7.3.0.
+GCC > 7.5.0 may have changed the implementation of a very low level behavior that I exploited for a hacky solution to a part of this project. To be safe, GCC 7.3.0 is the way to go.
+
+Compile with the following command:
+```
+g++ main.cpp -o main -w
+```
+(I am aware -w is not a good habit to form, but C++ is not meant to be used traditionally in the manner I have used it in, so lots of innocent, and correct, behaviors get flagged as warnings.)
+
+To run, simply run:
+```
+main.exe
+```
