@@ -1,6 +1,17 @@
 #ifndef EQUATION_PROCESSOR
 #define EQUATION_PROCESSOR
 
+#define PACK(...)                            \
+    union                                    \
+    {                                        \
+        static constexpr auto unpack()       \
+        {                                    \
+            return __VA_ARGS__;              \
+        }                                    \
+                                             \
+        typedef decltype(__VA_ARGS__) Ctype; \
+    }
+
 #ifndef OPER
     #define OPER inline constexpr const //OPERator return type modifier
 #endif // OPER
@@ -16,6 +27,7 @@
 #include "equals_impl.hpp"
 #include "exp_impl.hpp"
 #include "innertype_calc.hpp"
+#include "LOG_impl.hpp"
 #include "mult_impl.hpp"
 #include "ntuple.hpp"
 #include "OP_numeric.hpp"
@@ -28,6 +40,7 @@
 #include "unique_type.hpp"
 #include "var.hpp"
 #include "void_t.hpp"
+#include "unary_func_type.hpp"
 
 #define known   static constexpr const var<ticket(),1>
 #define unknown static constexpr const var<ticket(),0>

@@ -16,13 +16,17 @@ public:
 
     enum OpType //add new operators later (var exp, var log, etc)
     {
+        //To add new enum val, add to end only, and changes should be
+        //reflected in NI_sub_tree_IMPL below
+
         add,
         sub,
         mult,
         div,
         equal,
         exp,
-        compose
+        compose,
+        log
     };
 
     template<typename firsttype, typename secondtype>
@@ -42,6 +46,15 @@ private:
     //replacing namespace with struct w/ all static members
     struct NI_impl
     {
+        /**
+        *   NI_sub = New Information Substitution
+        *
+        *   Handles finding the unknown in a tree that matches a corresponding newly known variable,
+        *   and seeing if the variables are the same (external equation set solved for a variable, and now
+        *   we check if that var is in this tree as an unknown.) If so, return value to replace node with.
+        */
+
+        //node in node-replacement is number
         template<typename is_op_tree, typename is_known,
                  typename std::enable_if<std::is_arithmetic<const typename is_op_tree::Ctype>::value, EI_type&>::type...
                  >
@@ -51,6 +64,7 @@ private:
             return OT_C.unpack();
         }
 
+        //implementation namespace of logic for function below
         struct NI_sub_tree_impl
         {
             template<typename LHS_, typename RHS_>
@@ -65,10 +79,12 @@ private:
                     case 4: return Ins_OpType<LHS_, RHS_>::equal;
                     case 5: return Ins_OpType<LHS_, RHS_>::exp;
                     case 6: return Ins_OpType<LHS_, RHS_>::compose;
+                    case 7: return Ins_OpType<LHS_, RHS_>::log;
                 }
             }
         };
 
+        //node in node-replacement is op_tree
         template<typename is_op_tree, typename is_known,
                  typename std::enable_if<is_generic_op_tree<const typename is_op_tree::Ctype>::value, EI_type&>::type...
                  >
@@ -92,6 +108,7 @@ private:
              );
         }
 
+        //implementation namespace of logic for function below
         struct NI_sub_UK_impl
         {
             //found UK's ID matches known's ID
@@ -115,12 +132,23 @@ private:
             }
         };
 
+        //node in node-replacement is unknown, check if it is the unknown that matches the newly known variable
         template<typename is_op_tree, typename is_known,
         typename std::enable_if<is_unknown_failsafe<const typename is_op_tree::Ctype>::value, EI_type&>::type...>
         inline static constexpr const auto
         NI_sub(const is_op_tree& OT_C, const is_known& new_inf_C)
         {
             return NI_sub_UK_impl::NI_sub_UK(OT_C, new_inf_C);
+        }
+
+        //node in node-replacement is unary_ftype
+        template<typename is_op_tree, typename is_known,
+                 typename std::enable_if<is_unary_ftype<const typename is_op_tree::Ctype>::value, EI_type&>::type...
+                 >
+        static constexpr const auto
+        NI_sub(const is_op_tree& OT_C, const is_known& new_inf_C)
+        {
+            return OT_C.unpack();
         }
     };
 

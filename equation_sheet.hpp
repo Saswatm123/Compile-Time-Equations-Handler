@@ -10,19 +10,21 @@
 *   once for every equation.
 *
 *   - When using exponentials, always use parentheses, so a^2 -> (a^2)
-*   - Always write to one digit after decimal, so 1/2 -> 1.0/2.0
 */
 
-known   force(12);
-known   mass(3);
-known   distance(5);
-unknown acceleration;
-unknown time;
+unknown X;
+unknown Y;
+unknown Z;
+unknown A;
+unknown B;
+known C(3);
 
-TARGET(time)
+TARGET(X)
 
-EQUATION(eq1, force == mass * acceleration)
-
-EQUATION(eq2, distance == (1.0/2.0) * acceleration * (time^2))
+EQUATION(eq1, arcsec(X)-Y-Z == 1)
+EQUATION(eq2, (C^B) == 9)
+EQUATION(eq3, Y + Z + A == 4)
+EQUATION(eq4, (Y^B) == 2+2)
+EQUATION(eq5, A + Y == 6)
 
 #endif // EQUATION_SHEET

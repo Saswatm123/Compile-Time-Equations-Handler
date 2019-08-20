@@ -90,6 +90,14 @@ namespace extract_detail
         }
     }
 
+    //This exists for complicated functions whose C-C implementations I do not wish to
+    //rewrite in short_eval. These functions are only called for the Constant-Constant case,
+    //but to keep from rewriting code, we hide it in this namespace and refer to the implementation.
+    namespace conform_implementation
+    {
+        #include "LOG_impl.hpp"
+    }
+
     //SE should assume operation is not equals, have handler filter out
     inline constexpr const long double
     short_eval(int operation, const long double lhs, const long double rhs)
@@ -119,6 +127,10 @@ namespace extract_detail
         if(operation == OP::compose)
         {
             std::cout << "\nSHOULD NOT BE SEEING, COMPOSE SHOULD BE GOING TO FUNCTION BELOW";
+        }
+        if(operation == OP::log)
+        {
+            return conform_implementation::LOG(lhs, rhs);
         }
     }
 
@@ -315,6 +327,10 @@ namespace extract_detail
         *   Take in op tree and turn f(UK) = f(C) into UK = f(C).
         *   Different protocol for different operations, sub and div
         *   are side sensitive. Only called from EKM(bottom).
+        *
+        *   M_tree:         operation type (add,sub,mult,div,equal,exp,compose)
+        *   side1, side2:   side1 is direction from top of tree with UK. side2 is direction with UK from that side
+        *   is_op_tree:     op_tree type
         */
 
         ///add
@@ -565,6 +581,36 @@ namespace extract_detail
                            ret_help_left, ret_help_right);
         }
 
+        ///exp, Mright
+        template<int M_tree, bool side1, bool side2, typename is_op_tree,
+                 typename std::enable_if<M_tree == OpType<char,char>::exp && side2, EI_type&
+                                         >::type...
+                 >
+        inline constexpr const auto
+        extract_known(const is_op_tree& OT)
+        {
+            //non-important side
+            auto S_branch = ternary<!side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left);
+
+            //side from top node with var
+            auto M_branch = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left);
+
+            //side from M_branch with var
+            auto M_M_branch = ternary<side2, decltype(M_branch.right), decltype(M_branch.left)>(M_branch.right, M_branch.left);
+
+            //side from M_branch without var
+            auto M_S_branch = ternary<!side2, decltype(M_branch.right), decltype(M_branch.left)>(M_branch.right, M_branch.left);
+
+            auto new_S_branch = extract_detail::conform_implementation::LOG(M_S_branch, S_branch);
+
+            auto ret_help_left  = ternary<side1, decltype(M_M_branch), decltype(new_S_branch)>(M_M_branch, new_S_branch);
+            auto ret_help_right = ternary<side1, decltype(new_S_branch), decltype(M_M_branch)>(new_S_branch, M_M_branch);
+
+            return op_tree<decltype(ret_help_left), decltype(ret_help_right)>
+                          (OpType<decltype(ret_help_left), decltype(ret_help_right)>::equal,
+                           ret_help_left, ret_help_right);
+        }
+
         ///unary compose
         template<int M_tree, bool side1, bool side2, typename is_op_tree,
                  typename std::enable_if<M_tree == OpType<char,char>::compose, EI_type&
@@ -601,7 +647,7 @@ namespace extract_detail
                     auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
 
                     return op_tree<decltype(leftbranch), decltype(rightbranch)>
-                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::equal, leftbranch, rightbranch);
 
                     break;
                 }
@@ -616,7 +662,7 @@ namespace extract_detail
                     auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
 
                     return op_tree<decltype(leftbranch), decltype(rightbranch)>
-                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::equal, leftbranch, rightbranch);
 
                     break;
                 }
@@ -631,7 +677,7 @@ namespace extract_detail
                     auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
 
                     return op_tree<decltype(leftbranch), decltype(rightbranch)>
-                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::equal, leftbranch, rightbranch);
 
                     break;
                 }
@@ -646,7 +692,7 @@ namespace extract_detail
                     auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
 
                     return op_tree<decltype(leftbranch), decltype(rightbranch)>
-                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::equal, leftbranch, rightbranch);
 
                     break;
                 }
@@ -661,7 +707,7 @@ namespace extract_detail
                     auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
 
                     return op_tree<decltype(leftbranch), decltype(rightbranch)>
-                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::equal, leftbranch, rightbranch);
 
                     break;
                 }
@@ -676,7 +722,7 @@ namespace extract_detail
                     auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
 
                     return op_tree<decltype(leftbranch), decltype(rightbranch)>
-                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::equal, leftbranch, rightbranch);
 
                     break;
                 }
@@ -691,7 +737,7 @@ namespace extract_detail
                     auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
 
                     return op_tree<decltype(leftbranch), decltype(rightbranch)>
-                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::equal, leftbranch, rightbranch);
 
                     break;
                 }
@@ -706,7 +752,7 @@ namespace extract_detail
                     auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
 
                     return op_tree<decltype(leftbranch), decltype(rightbranch)>
-                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::equal, leftbranch, rightbranch);
 
                     break;
                 }
@@ -721,7 +767,7 @@ namespace extract_detail
                     auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
 
                     return op_tree<decltype(leftbranch), decltype(rightbranch)>
-                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::equal, leftbranch, rightbranch);
 
                     break;
                 }
@@ -736,7 +782,7 @@ namespace extract_detail
                     auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
 
                     return op_tree<decltype(leftbranch), decltype(rightbranch)>
-                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::equal, leftbranch, rightbranch);
 
                     break;
                 }
@@ -751,7 +797,7 @@ namespace extract_detail
                     auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
 
                     return op_tree<decltype(leftbranch), decltype(rightbranch)>
-                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::equal, leftbranch, rightbranch);
 
                     break;
                 }
@@ -766,7 +812,7 @@ namespace extract_detail
                     auto rightbranch = ternary< side1, decltype(new_M_branch), decltype(new_S_branch)>(new_M_branch, new_S_branch);
 
                     return op_tree<decltype(leftbranch), decltype(rightbranch)>
-                    (OpType<decltype(leftbranch), decltype(rightbranch)>::compose, leftbranch, rightbranch);
+                    (OpType<decltype(leftbranch), decltype(rightbranch)>::equal, leftbranch, rightbranch);
 
                     break;
                 }
@@ -801,14 +847,16 @@ namespace extract_detail
 
     template<typename leftop, typename rightop,
              typename std::enable_if<is_unary_ftype<leftop>::value, EI_type&>::type...>
-    constexpr auto short_eval_resolve_unary_call(const int A, leftop LHS, rightop RHS)
+    constexpr auto
+    short_eval_resolve_unary_call(const int A, leftop LHS, rightop RHS)
     {
         return short_eval(A, LHS, RHS, LHS.indicator);
     }
 
     template<typename leftop, typename rightop,
              typename std::enable_if<!is_unary_ftype<leftop>::value, EI_type&>::type...>
-    constexpr auto short_eval_resolve_unary_call(const int A, leftop LHS, rightop RHS)
+    constexpr auto
+    short_eval_resolve_unary_call(const int A, leftop LHS, rightop RHS)
     {
         return short_eval(A, LHS, RHS);
     }

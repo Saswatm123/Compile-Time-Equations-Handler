@@ -100,4 +100,10 @@ inline constexpr const bool has_noted_ID(const is_op_tree& OT, const int& ID)
     return has_noted_ID(OT.left, ID) || has_noted_ID(OT.right, ID);
 }
 
+template<typename is_op_tree, typename std::enable_if<is_unary_ftype<const is_op_tree>::value, is_op_tree>::type...>
+inline constexpr const bool has_noted_ID(const is_op_tree& OT, const int& ID)
+{
+    return false;
+}
+
 #endif // OP_NUMERIC
