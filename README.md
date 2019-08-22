@@ -57,6 +57,7 @@ The operators are:
  - \- : Subtract
  - \* : Multiply
  - / : Divide
+ - LOG(A, B) : log base A of B (ex. LOG(10, 100) = 2 )
  - ^ : Exponentiate 
 
 **Crucial: any exponentiation must be inside parentheses due to natural C++ operator precedence putting ^ last.** That means that the formula
