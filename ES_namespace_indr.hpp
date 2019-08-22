@@ -4,6 +4,7 @@ namespace equation_sheet
 {
     //Prevents ambiguous but common names like "time"
     //and "speed" from colliding with STL names
+
     #include "equation_sheet.hpp"
 }
 

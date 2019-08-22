@@ -1,6 +1,10 @@
 #ifndef CMD_LIST
 #define CMD_LIST
 
+#include "LOG_impl.hpp"
+#include "equals_impl.hpp"
+#include "exp_impl.hpp"
+
 #include "void_t.hpp"
 #include "innertype_calc.hpp"
 #include "ntuple.hpp"
@@ -90,14 +94,6 @@ namespace extract_detail
         }
     }
 
-    //This exists for complicated functions whose C-C implementations I do not wish to
-    //rewrite in short_eval. These functions are only called for the Constant-Constant case,
-    //but to keep from rewriting code, we hide it in this namespace and refer to the implementation.
-    namespace conform_implementation
-    {
-        #include "LOG_impl.hpp"
-    }
-
     //SE should assume operation is not equals, have handler filter out
     inline constexpr const long double
     short_eval(int operation, const long double lhs, const long double rhs)
@@ -130,7 +126,7 @@ namespace extract_detail
         }
         if(operation == OP::log)
         {
-            return conform_implementation::LOG(lhs, rhs);
+            return LOG(lhs, rhs);
         }
     }
 
@@ -601,7 +597,74 @@ namespace extract_detail
             //side from M_branch without var
             auto M_S_branch = ternary<!side2, decltype(M_branch.right), decltype(M_branch.left)>(M_branch.right, M_branch.left);
 
-            auto new_S_branch = extract_detail::conform_implementation::LOG(M_S_branch, S_branch);
+            auto new_S_branch = LOG(M_S_branch, S_branch);
+
+            auto ret_help_left  = ternary<side1, decltype(M_M_branch), decltype(new_S_branch)>(M_M_branch, new_S_branch);
+            auto ret_help_right = ternary<side1, decltype(new_S_branch), decltype(M_M_branch)>(new_S_branch, M_M_branch);
+
+            return op_tree<decltype(ret_help_left), decltype(ret_help_right)>
+                          (OpType<decltype(ret_help_left), decltype(ret_help_right)>::equal,
+                           ret_help_left, ret_help_right);
+        }
+
+        ///log, Mleft
+        template<int M_tree, bool side1, bool side2, typename is_op_tree,
+                 typename std::enable_if<M_tree == OpType<char,char>::log && !side2, EI_type&
+                                         >::type...
+                 >
+        inline constexpr const auto
+        extract_known(const is_op_tree& OT)
+        {
+            //non-important side
+            auto S_branch = ternary<!side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left);
+
+            //branch from top with variable
+            auto M_branch = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left);
+
+            //branch from M with variable
+            auto M_M_branch = ternary< side2, decltype(M_branch.right), decltype(M_branch.left)>(M_branch.right, M_branch.left);
+
+            //branch from M with no variable
+            auto M_S_branch = ternary<!side2, decltype(M_branch.right), decltype(M_branch.left)>(M_branch.right, M_branch.left);
+
+            auto reciprocal = op_tree<long double, decltype(S_branch)>
+            (OpType<long double, decltype(S_branch)>::div, 1, S_branch);
+
+            auto new_S_branch = op_tree<decltype(M_S_branch), decltype(reciprocal)>
+                                       (OpType<decltype(M_S_branch), decltype(reciprocal)>::exp,
+                                        M_S_branch, reciprocal);
+
+            auto ret_help_left  = ternary<side1, decltype(M_M_branch), decltype(new_S_branch)>(M_M_branch, new_S_branch);
+            auto ret_help_right = ternary<side1, decltype(new_S_branch), decltype(M_M_branch)>(new_S_branch, M_M_branch);
+
+            return op_tree<decltype(ret_help_left), decltype(ret_help_right)>
+                          (OpType<decltype(ret_help_left), decltype(ret_help_right)>::equal,
+                           ret_help_left, ret_help_right);
+        }
+
+        ///log, Mright
+        template<int M_tree, bool side1, bool side2, typename is_op_tree,
+                 typename std::enable_if<M_tree == OpType<char,char>::log && side2, EI_type&
+                                         >::type...
+                 >
+        inline constexpr const auto
+        extract_known(const is_op_tree& OT)
+        {
+            //non-important side
+            auto S_branch = ternary<!side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left);
+
+            //branch from top with variable
+            auto M_branch = ternary<side1, decltype(OT.right), decltype(OT.left)>(OT.right, OT.left);
+
+            //branch from M with variable
+            auto M_M_branch = ternary< side2, decltype(M_branch.right), decltype(M_branch.left)>(M_branch.right, M_branch.left);
+
+            //branch from M with no variable
+            auto M_S_branch = ternary<!side2, decltype(M_branch.right), decltype(M_branch.left)>(M_branch.right, M_branch.left);
+
+            auto new_S_branch = op_tree<decltype(M_S_branch), decltype(S_branch)>
+                                       (OpType<decltype(M_S_branch), decltype(S_branch)>::exp,
+                                        M_S_branch, S_branch);
 
             auto ret_help_left  = ternary<side1, decltype(M_M_branch), decltype(new_S_branch)>(M_M_branch, new_S_branch);
             auto ret_help_right = ternary<side1, decltype(new_S_branch), decltype(M_M_branch)>(new_S_branch, M_M_branch);

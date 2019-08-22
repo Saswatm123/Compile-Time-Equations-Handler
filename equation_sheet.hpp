@@ -25,6 +25,6 @@ EQUATION(eq1, arcsec(X)-Y-Z == 1)
 EQUATION(eq2, (C^B) == 9)
 EQUATION(eq3, Y + Z + A == 4)
 EQUATION(eq4, (Y^B) == 2+2)
-EQUATION(eq5, A + Y == 6)
+EQUATION(eq5, LOG(A, 64) + Y == 5)
 
 #endif // EQUATION_SHEET
